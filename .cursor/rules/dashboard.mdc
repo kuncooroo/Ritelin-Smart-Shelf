@@ -1,0 +1,14 @@
+---
+description: Dashboard admin RITELIN hanya memantau indikasi aktivitas rak.
+globs: dashboard/**,backend/app/Livewire/**,backend/resources/views/**
+alwaysApply: false
+---
+
+# Dashboard admin
+
+Kerjakan UI ini hanya jika `docs/PHASE.md` menandai Tahap 5 sebagai tahap aktif. Pilih Laravel Livewire atau Next.js di awal Tahap 5, setelah Tahap 1–3 lolos.
+
+- Tampilkan status online/offline, waktu sinkron terakhir, berat terakhir, dan riwayat event.
+- Admin mengelola pemetaan perangkat ke satu jenis produk.
+- Label UI: indikasi aktivitas rak. Jangan menulis terjual, hilang, atau dicuri untuk event sensor.
+- Jangan menambahkan pencocokan POS sebelum Tahap 6 aktif.

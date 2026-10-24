@@ -1,0 +1,17 @@
+---
+description: API Laravel RITELIN hanya setelah Tahap 4 aktif.
+globs: backend/**
+alwaysApply: false
+---
+
+# Backend
+
+Kerjakan isi folder ini hanya jika `docs/PHASE.md` menandai Tahap 4 atau lebih tinggi sebagai tahap aktif.
+
+- Laravel REST API dan MySQL.
+- Registrasi perangkat, pemetaan satu perangkat ke satu produk, dan riwayat event.
+- Kredensial unik per perangkat. Jangan satu secret untuk semua device.
+- Validasi identitas perangkat dan payload sebelum simpan.
+- `event_id` unik. Pengiriman ulang tidak menambah baris baru.
+- Simpan waktu komunikasi terakhir untuk status online/offline.
+- Jangan membangun dashboard, POS, atau pencocokan transaksi di tahap ini.

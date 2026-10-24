@@ -1,0 +1,17 @@
+---
+description: Gerbang tahap RITELIN Smart Shelf. Tolak pekerjaan di luar tahap aktif.
+alwaysApply: true
+---
+
+# Gerbang tahap
+
+Sebelum mengubah kode atau dokumen teknis, baca `docs/PHASE.md`. Tahap aktif adalah satu-satunya pekerjaan yang boleh dikerjakan.
+
+- Jangan mulai tahap berikutnya sebelum setiap syarat keluar tahap berjalan dicentang di `docs/PHASE.md`.
+- Jangan menaikkan tahap aktif sendiri. Naikkan hanya setelah syarat keluar terpenuhi dan pengguna meminta tahap berikutnya.
+- Perubahan berat adalah indikasi fisik, bukan bukti penjualan, pencurian, atau transaksi.
+- Satu platform load cell untuk satu jenis produk.
+- Rahasia perangkat unik per `device_id`. Jangan pakai satu kunci bersama.
+- Jaringan publik memakai HTTPS dan autentikasi per perangkat.
+- Jangan sentuh proyek SimplePOS lain sebelum Tahap 6 aktif.
+- Firmware, Wi-Fi, API, dashboard, POS, baterai, BLE, PCB, dan casing mengikuti urutan di `docs/PHASE.md`.

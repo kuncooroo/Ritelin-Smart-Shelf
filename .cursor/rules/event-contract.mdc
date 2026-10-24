@@ -1,0 +1,26 @@
+---
+description: Kontrak event sensor RITELIN agar retry tidak menggandakan data.
+globs: firmware/**,backend/**
+alwaysApply: false
+---
+
+# Kontrak event
+
+Payload event:
+
+```json
+{
+  "device_id": "SHELF-001",
+  "event_id": "evt-000123",
+  "event_type": "ITEM_REMOVED",
+  "weight_grams": 12.4,
+  "timestamp": "2026-10-23T01:30:00Z"
+}
+```
+
+- `device_id` unik per perangkat. `event_id` unik per kejadian.
+- `event_type` yang sah: `ITEM_REMOVED`, `ITEM_RETURNED`.
+- `timestamp` UTC dengan zona waktu eksplisit (`Z`).
+- Nilai berat dan waktu berasal dari firmware, bukan contoh statis.
+- Retry mengirim `event_id` yang sama. Penerima menolak duplikat.
+- Backend memvalidasi payload sebelum menyimpan.

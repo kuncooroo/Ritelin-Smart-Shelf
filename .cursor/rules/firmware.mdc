@@ -1,0 +1,16 @@
+---
+description: Firmware ESP32 RITELIN. Kalibrasi dan deteksi sebelum Wi-Fi.
+globs: firmware/**
+alwaysApply: false
+---
+
+# Firmware
+
+- Bahasa Arduino C/C++ untuk ESP32 DevKit, load cell, dan HX711.
+- Catu daya prototype: USB 5 V. Kapasitas load cell awal 5 kg.
+- Catat pinout, daftar komponen, dan faktor kalibrasi di `docs/hardware.md` pada Tahap 1.
+- Pembacaan berkala, tare, konversi gram, filter median atau rata-rata, baseline, threshold, dan jendela verifikasi yang dapat dikonfigurasi.
+- State: `NORMAL` → `CHANGE_DETECTED` → `VERIFYING` → `ITEM_REMOVED`, lalu `VERIFYING_RETURN` → `ITEM_RETURNED`.
+- Noise dan sentuhan ringan tidak boleh langsung menjadi event permanen.
+- Serial Monitor menampilkan `device_id`, berat gram, status, dan event.
+- Jangan menambah Wi-Fi, HTTP, atau antrean kirim sebelum Tahap 3 aktif di `docs/PHASE.md`.
