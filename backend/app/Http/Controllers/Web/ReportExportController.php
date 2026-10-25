@@ -23,7 +23,7 @@ class ReportExportController extends Controller
             }
 
             fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, ['jenis', 'tanggal', 'kode', 'nama', 'diambil', 'dikembalikan', 'transaksi', 'anomali', 'keterangan']);
+            fputcsv($out, ['jenis', 'tanggal', 'kode', 'nama', 'diambil', 'berat_naik', 'transaksi', 'anomali', 'keterangan']);
             fputcsv($out, [
                 'ringkasan',
                 $data['from'].' s.d. '.$data['to'],

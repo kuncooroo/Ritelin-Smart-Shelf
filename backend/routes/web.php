@@ -1,12 +1,12 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\ReportExportController;
 use App\Livewire\Anomalies;
 use App\Livewire\DeviceDetail;
 use App\Livewire\Devices;
 use App\Livewire\Events;
+use App\Livewire\Home;
 use App\Livewire\PosSimulator;
 use App\Livewire\Products;
 use App\Livewire\Profile;
@@ -28,7 +28,7 @@ Route::post('/logout', [LoginController::class, 'destroy'])
 
 Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/', fn () => redirect()->route('dashboard'));
-    Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/dashboard', Home::class)->name('dashboard');
     Route::get('/dashboard/profil', Profile::class)->name('dashboard.profile');
     Route::get('/dashboard/perangkat', Devices::class)
         ->middleware('permission:shelf.devices.view')

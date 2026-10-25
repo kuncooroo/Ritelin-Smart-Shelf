@@ -3,24 +3,30 @@
 namespace App\Livewire;
 
 use App\Enums\PermissionName;
-use App\Enums\ShelfStatus;
 use App\Livewire\Concerns\AuthorizesShelf;
-use App\Models\Device;
+use App\Livewire\Concerns\ConfirmsActions;
+use App\Livewire\Concerns\WithPageSize;
 use App\Models\Product;
-use App\Services\AnomalySync;
 use App\Services\AuditLogger;
-use App\Services\ShelfMatcher;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Livewire\WithPagination;
 
-#[Layout('layouts.app', ['title' => 'Produk dan rak'])]
+#[Layout('layouts.app', ['title' => 'Produk'])]
 class Products extends Component
 {
     use AuthorizesShelf;
+    use ConfirmsActions;
     use WithFileUploads;
+    use WithPageSize;
+    use WithPagination;
+
+    public string $search = '';
+
+    public ?int $deletingId = null;
 
     public ?int $editingId = null;
 
@@ -41,16 +47,6 @@ class Products extends Component
     public string $message = '';
 
     public bool $showProductForm = false;
-
-    public ?int $mappingDeviceId = null;
-
-    /** @var array<int|string, array<string, string>> */
-    public array $mappings = [];
-
-    public function mount(): void
-    {
-        $this->loadSlots();
-    }
 
     public function openCreate(): void
     {
@@ -123,6 +119,46 @@ class Products extends Component
         $this->message = 'Produk disimpan.';
     }
 
+    public function updatingSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function openDelete(int $productId): void
+    {
+        $this->authorizeShelf(PermissionName::ProductsManage);
+        $this->deletingId = $productId;
+    }
+
+    public function closeDelete(): void
+    {
+        $this->deletingId = null;
+        $this->resetErrorBag();
+    }
+
+    public function deleteProduct(AuditLogger $audit): void
+    {
+        $this->authorizeShelf(PermissionName::ProductsManage);
+        $product = Product::query()->withCount('transactions')->find($this->deletingId);
+        if ($product === null) {
+            $this->closeDelete();
+
+            return;
+        }
+
+        if ($product->transactions_count > 0) {
+            $this->addError('products', 'Produk yang sudah punya transaksi kasir tidak dapat dihapus.');
+
+            return;
+        }
+
+        $sku = $product->sku;
+        $product->delete();
+        $audit->record('product.deleted', 'Produk '.$sku.' dihapus.');
+        $this->closeDelete();
+        $this->message = 'Produk '.$sku.' dihapus.';
+    }
+
     public function toggleProduct(int $productId, AuditLogger $audit): void
     {
         $this->authorizeShelf(PermissionName::ProductsManage);
@@ -133,67 +169,6 @@ class Products extends Component
         $this->message = $product->is_active ? 'Produk diaktifkan.' : 'Produk dinonaktifkan.';
     }
 
-    public function openMapping(int $deviceId): void
-    {
-        $this->authorizeShelf(PermissionName::DevicesManage);
-        $this->mappingDeviceId = $deviceId;
-        $this->resetValidation();
-    }
-
-    public function closeMapping(): void
-    {
-        $this->mappingDeviceId = null;
-        $this->resetValidation();
-    }
-
-    public function saveMapping(ShelfMatcher $matcher, AnomalySync $anomalies, AuditLogger $audit): void
-    {
-        $this->authorizeShelf(PermissionName::DevicesManage);
-        $deviceId = $this->mappingDeviceId;
-        $slot = $deviceId === null
-            ? null
-            : ($this->mappings[$deviceId] ?? $this->mappings[(string) $deviceId] ?? null);
-
-        if (! is_array($slot)) {
-            return;
-        }
-
-        $validator = validator($slot, [
-            'product_id' => ($slot['product_id'] ?? '') === '' ? ['nullable'] : ['exists:products,id'],
-            'slot_label' => ['nullable', 'string', 'max:40'],
-            'store_location' => ['nullable', 'string', 'max:80'],
-            'baseline_weight_grams' => ($slot['baseline_weight_grams'] ?? '') === '' ? ['nullable'] : ['numeric', 'between:-5000,5000'],
-            'threshold_grams' => ($slot['threshold_grams'] ?? '') === '' ? ['nullable'] : ['numeric', 'between:1,5000'],
-            'shelf_status' => ['required', Rule::in(array_column(ShelfStatus::cases(), 'value'))],
-        ]);
-
-        if ($validator->fails()) {
-            $this->addError('mappings', (string) $validator->errors()->first());
-
-            return;
-        }
-
-        $device = Device::query()->find($deviceId);
-        if ($device === null) {
-            return;
-        }
-
-        $device->fill([
-            'product_id' => ($slot['product_id'] ?? '') === '' ? null : (int) $slot['product_id'],
-            'slot_label' => ($slot['slot_label'] ?? '') !== '' ? $slot['slot_label'] : null,
-            'store_location' => ($slot['store_location'] ?? '') !== '' ? $slot['store_location'] : null,
-            'baseline_weight_grams' => ($slot['baseline_weight_grams'] ?? '') !== '' ? $slot['baseline_weight_grams'] : null,
-            'threshold_grams' => ($slot['threshold_grams'] ?? '') !== '' ? $slot['threshold_grams'] : null,
-            'shelf_status' => $slot['shelf_status'],
-        ])->save();
-        $matcher->reconcile($device);
-        $anomalies->sync();
-        $audit->record('shelf.mapping', 'Pemetaan '.$device->code.' disimpan.', $device);
-        $this->loadSlots();
-        $this->closeMapping();
-        $this->message = 'Pemetaan rak disimpan. Satu slot tetap untuk satu jenis produk.';
-    }
-
     private function clearProductForm(): void
     {
         $this->reset('editingId', 'name', 'sku', 'category', 'salePrice', 'unitWeight', 'image');
@@ -201,27 +176,30 @@ class Products extends Component
         $this->resetValidation();
     }
 
-    public function render(): View
+    /**
+     * @return list<string>
+     */
+    protected function confirmableActions(): array
     {
-        return view('livewire.products', [
-            'products' => Product::query()->withCount('devices')->orderBy('name')->get(),
-            'devices' => Device::query()->with('product')->orderBy('code')->get(),
-            'shelfStatuses' => ShelfStatus::cases(),
-            'editing' => $this->editingId === null ? null : Product::query()->find($this->editingId),
-        ]);
+        return ['saveProduct', 'deleteProduct', 'toggleProduct'];
     }
 
-    private function loadSlots(): void
+    public function render(): View
     {
-        $this->mappings = Device::query()->orderBy('code')->get()->mapWithKeys(function (Device $device): array {
-            return [$device->id => [
-                'product_id' => $device->product_id === null ? '' : (string) $device->product_id,
-                'slot_label' => (string) $device->slot_label,
-                'store_location' => (string) $device->store_location,
-                'baseline_weight_grams' => $device->baseline_weight_grams === null ? '' : (string) $device->baseline_weight_grams,
-                'threshold_grams' => $device->threshold_grams === null ? '' : (string) $device->threshold_grams,
-                'shelf_status' => $device->shelf_status?->value ?? ShelfStatus::Normal->value,
-            ]];
-        })->all();
+        $term = trim($this->search);
+        $products = Product::query()->withCount('devices')->orderBy('name');
+        if ($term !== '') {
+            $products->where(function ($query) use ($term): void {
+                $query->where('name', 'like', '%'.$term.'%')
+                    ->orWhere('sku', 'like', '%'.$term.'%')
+                    ->orWhere('category', 'like', '%'.$term.'%');
+            });
+        }
+
+        return view('livewire.products', [
+            'products' => $products->paginate($this->pageSize()),
+            'editing' => $this->editingId === null ? null : Product::query()->find($this->editingId),
+            'deletingProduct' => $this->deletingId === null ? null : Product::query()->find($this->deletingId),
+        ]);
     }
 }

@@ -13,8 +13,15 @@ final class RolePermissionMatrix
     public static function permissionsFor(RoleName $role): array
     {
         $names = match ($role) {
-            RoleName::Admin => PermissionName::cases(),
-            RoleName::Petugas, RoleName::Pemilik => [
+            RoleName::Superadmin => PermissionName::cases(),
+            RoleName::Admin => array_values(array_filter(
+                PermissionName::cases(),
+                fn (PermissionName $permission): bool => ! in_array($permission, [
+                    PermissionName::UsersView,
+                    PermissionName::UsersManage,
+                ], true),
+            )),
+            RoleName::Staff => [
                 PermissionName::DevicesView,
                 PermissionName::EventsView,
                 PermissionName::SensorsView,

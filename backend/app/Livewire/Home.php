@@ -1,23 +1,32 @@
 <?php
 
-namespace App\Http\Controllers\Web;
+namespace App\Livewire;
 
 use App\Enums\PermissionName;
-use App\Http\Controllers\Controller;
+use App\Livewire\Concerns\RefreshesWithDashboard;
+use App\Livewire\Concerns\WithPageSize;
 use App\Models\User;
 use App\Services\DashboardOverview;
 use Illuminate\View\View;
+use Livewire\Attributes\Layout;
+use Livewire\Component;
+use Livewire\WithPagination;
 
-class DashboardController extends Controller
+#[Layout('layouts.app', ['title' => 'Beranda'])]
+class Home extends Component
 {
-    public function __invoke(DashboardOverview $overview): View
+    use RefreshesWithDashboard;
+    use WithPageSize;
+    use WithPagination;
+
+    public function render(DashboardOverview $overview): View
     {
         /** @var User $user */
         $user = auth()->user();
 
-        return view('dashboard.home', [
+        return view('livewire.home', [
             'user' => $user,
-            'overview' => $overview->present(),
+            'overview' => $overview->present($this->pageSize()),
             'shortcuts' => array_values(array_filter([
                 $user->hasPermission(PermissionName::DevicesView) ? ['label' => 'Perangkat', 'url' => route('dashboard.devices'), 'primary' => true] : null,
                 $user->hasPermission(PermissionName::EventsView) ? ['label' => 'Riwayat aktivitas', 'url' => route('dashboard.events'), 'primary' => false] : null,
@@ -25,5 +34,13 @@ class DashboardController extends Controller
                 $user->hasPermission(PermissionName::PosManage) ? ['label' => 'Transaksi kasir', 'url' => route('dashboard.pos'), 'primary' => false] : null,
             ])),
         ]);
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function pageNames(): array
+    {
+        return ['recent', 'devices'];
     }
 }

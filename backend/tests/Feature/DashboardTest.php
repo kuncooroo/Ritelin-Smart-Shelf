@@ -10,12 +10,16 @@ use App\Livewire\PosSimulator;
 use App\Livewire\Products;
 use App\Livewire\Reconciliation;
 use App\Livewire\Settings;
+use App\Livewire\Users;
+use App\Enums\PermissionName;
 use App\Models\Anomaly;
 use App\Models\AppSetting;
 use App\Models\Device;
 use App\Models\Product;
+use App\Models\Role;
 use App\Models\ShelfEvent;
 use App\Models\User;
+use App\Models\WeightReading;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -46,8 +50,9 @@ class DashboardTest extends TestCase
 
         $this->get(route('dashboard.users'))
             ->assertOk()
-            ->assertSee('Petugas toko')
-            ->assertSee('Pemilik toko');
+            ->assertSee('Petugas Toko')
+            ->assertSee('Pemilik Toko')
+            ->assertSee('Superadmin');
     }
 
     public function test_petugas_can_monitor_the_shelf_but_not_manage_it(): void
@@ -123,6 +128,40 @@ class DashboardTest extends TestCase
 
         $component->set('assignments.'.$device->id, (string) $product->id);
         $this->assertSame($product->id, $device->fresh()->product_id);
+
+        $component->call('openMapping', $device->id)
+            ->set('deviceName', 'Rak depan')
+            ->set('storeLocation', 'Toko utama')
+            ->set('slotLabel', 'A1')
+            ->set('productId', (string) $product->id)
+            ->call('saveMapping')
+            ->assertHasNoErrors();
+
+        $device->refresh();
+        $this->assertSame('SHELF-002', $device->code);
+        $this->assertSame('Rak depan', $device->name);
+        $this->assertSame('Toko utama', $device->store_location);
+        $this->assertSame('A1', $device->slot_label);
+        $this->assertSame($product->id, $device->product_id);
+
+        Livewire::actingAs($admin)->test(Devices::class)
+            ->set('code', 'SHELF-003')
+            ->set('name', 'Rak baru')
+            ->set('storeLocation', 'Toko selatan')
+            ->set('slotLabel', 'B2')
+            ->set('productId', (string) $product->id)
+            ->call('createDevice')
+            ->assertHasNoErrors();
+
+        $created = Device::query()->where('code', 'SHELF-003')->firstOrFail();
+        $this->assertSame('Toko selatan', $created->store_location);
+        $this->assertSame('B2', $created->slot_label);
+
+        Livewire::actingAs($admin)->test(Devices::class)
+            ->call('openDelete', $created->id)
+            ->call('deleteDevice')
+            ->assertHasNoErrors();
+        $this->assertNull(Device::query()->find($created->id));
     }
 
     public function test_simulator_records_a_transaction_for_the_mapped_product(): void
@@ -222,10 +261,16 @@ class DashboardTest extends TestCase
         Livewire::actingAs($admin)->test(Settings::class)
             ->set('offlineSeconds', '120')
             ->set('thresholdGrams', '20')
+            ->set('matchLeadMinutes', '2')
+            ->set('matchWindowMinutes', '10')
+            ->set('stockWindowMinutes', '15')
             ->call('save')
             ->assertHasNoErrors();
 
         $this->assertSame(120, AppSetting::offlineSeconds());
+        $this->assertSame(15, AppSetting::stockWindowMinutes());
+        $this->assertSame(10, AppSetting::matchWindowMinutes());
+        $this->assertSame(2, AppSetting::matchLeadMinutes());
 
         $response = $this->actingAs($admin)->get(route('dashboard.reports.csv'));
         $response->assertOk();
@@ -271,8 +316,93 @@ class DashboardTest extends TestCase
         $this->actingAs($petugas)->get(route('dashboard.sensors'))->assertOk();
         $this->actingAs($petugas)->get(route('dashboard.anomalies'))->assertOk();
         $this->actingAs($petugas)->get(route('dashboard.reconciliation'))->assertOk();
-        $this->actingAs($petugas)->get(route('dashboard.reports'))->assertOk();
+        $this->actingAs($petugas)->get(route('dashboard.reports'))
+            ->assertOk()
+            ->assertSee('Laporan & Analisis')
+            ->assertSee('Aktivitas harian');
         $this->actingAs($petugas)->get(route('dashboard.products'))->assertOk()->assertDontSee('Simpan produk');
         $this->actingAs($petugas)->get(route('dashboard.settings'))->assertForbidden();
+        $this->actingAs($petugas)->get(route('dashboard.users'))->assertForbidden();
+    }
+
+    public function test_only_the_highest_role_can_create_and_delete_users(): void
+    {
+        $this->seed();
+        $admin = User::query()->where('email', 'admin@ritelin.local')->firstOrFail();
+        $petugas = User::query()->where('email', 'petugas@ritelin.local')->firstOrFail();
+
+        Livewire::actingAs($petugas)->test(Users::class)->assertForbidden();
+
+        Livewire::actingAs($admin)->test(Users::class)
+            ->set('name', 'Kasir Baru')
+            ->set('email', 'kasir@ritelin.local')
+            ->set('password', 'password1')
+            ->set('role', 'staff')
+            ->call('saveUser')
+            ->assertHasNoErrors();
+
+        $created = User::query()->where('email', 'kasir@ritelin.local')->firstOrFail();
+        $this->assertTrue($created->hasRole('staff'));
+
+        Livewire::actingAs($admin)->test(Users::class)
+            ->call('openDelete', $created->id)
+            ->call('deleteUser')
+            ->assertHasNoErrors();
+
+        $this->assertNull(User::query()->find($created->id));
+    }
+
+    public function test_highest_role_can_change_permissions_without_dropping_account_control(): void
+    {
+        $this->seed();
+        $admin = User::query()->where('email', 'admin@ritelin.local')->firstOrFail();
+        $staff = Role::query()->where('name', 'staff')->firstOrFail();
+
+        Livewire::actingAs($admin)->test(Users::class)
+            ->set('bagian', 'peran')
+            ->call('togglePermission', 'staff', PermissionName::PosManage->value)
+            ->assertHasNoErrors();
+
+        $this->assertTrue($staff->permissions()->where('name', PermissionName::PosManage->value)->exists());
+
+        Livewire::actingAs($admin)->test(Users::class)
+            ->call('togglePermission', 'superadmin', PermissionName::UsersManage->value)
+            ->assertHasErrors('roles');
+
+        $this->assertTrue(
+            Role::query()->where('name', 'superadmin')->firstOrFail()
+                ->permissions()->where('name', PermissionName::UsersManage->value)->exists()
+        );
+    }
+
+    public function test_demo_seed_leaves_an_existing_shelf_001_untouched(): void
+    {
+        $this->seed();
+        $device = Device::query()->where('code', 'SHELF-001')->firstOrFail();
+        $device->name = 'Rak yang sudah ada';
+        $device->store_location = 'Lokasi tetap';
+        $device->slot_label = 'Z9';
+        $device->save();
+        $hash = $device->token_hash;
+        $device->readings()->delete();
+        WeightReading::query()->create([
+            'device_id' => $device->id,
+            'weight_grams' => 12.5,
+            'recorded_at' => now(),
+            'source' => 'heartbeat',
+        ]);
+
+        $this->seed();
+
+        $fresh = $device->fresh();
+        $this->assertSame('Rak yang sudah ada', $fresh->name);
+        $this->assertSame('Lokasi tetap', $fresh->store_location);
+        $this->assertSame('Z9', $fresh->slot_label);
+        $this->assertSame($hash, $fresh->token_hash);
+        $this->assertSame(1, $fresh->readings()->count());
+        $this->assertSame('12.5', (string) $fresh->readings()->value('weight_grams'));
+        $this->assertNotNull(Device::query()->where('code', 'SHELF-010')->first());
+        $this->assertNotNull(Device::query()->where('code', 'SHELF-012')->first());
+        $this->assertSame(0, ShelfEvent::query()->where('device_id', $device->id)->where('event_id', 'like', 'evt-demo-%')->count());
     }
 }

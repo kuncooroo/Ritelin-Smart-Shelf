@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AppSetting;
 use App\Models\Device;
 use App\Models\WeightReading;
 use App\Services\SensorStability;
@@ -42,7 +43,9 @@ class ConfigController extends Controller
             'device_id' => $device->code,
             'threshold_grams' => $device->fresh()->effectiveThreshold(),
             'verify_ms' => (int) config('ritelin.verify_ms'),
-            'match_window_minutes' => (int) config('ritelin.match_window_minutes'),
+            'match_window_minutes' => AppSetting::matchWindowMinutes(),
+            'stock_window_minutes' => AppSetting::stockWindowMinutes(),
+            'tare' => (bool) $device->fresh()->tare_requested,
         ]);
     }
 }

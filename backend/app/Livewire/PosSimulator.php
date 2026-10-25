@@ -5,17 +5,24 @@ namespace App\Livewire;
 use App\Enums\PermissionName;
 use App\Models\PosTransaction;
 use App\Models\Product;
+use App\Services\AnomalySync;
 use App\Services\ShelfMatcher;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
+use App\Livewire\Concerns\RefreshesWithDashboard;
+use App\Livewire\Concerns\WithPageSize;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 #[Layout('layouts.app', ['title' => 'Transaksi kasir'])]
 class PosSimulator extends Component
 {
+    use RefreshesWithDashboard;
+    use WithPageSize;
+    use WithPagination;
     public string $productId = '';
 
     public int $quantity = 1;
@@ -44,7 +51,7 @@ class PosSimulator extends Component
         $this->showRecord = false;
     }
 
-    public function record(ShelfMatcher $matcher): void
+    public function record(ShelfMatcher $matcher, AnomalySync $anomalies): void
     {
         abort_unless(auth()->user()?->hasPermission(PermissionName::PosManage) ?? false, 403);
         $this->validate([
@@ -62,6 +69,7 @@ class PosSimulator extends Component
         ]);
 
         $matcher->reconcileAll();
+        $anomalies->sync();
         $this->quantity = 1;
         $this->showRecord = false;
     }
@@ -83,7 +91,7 @@ class PosSimulator extends Component
 
         return view('livewire.pos-simulator', [
             'products' => Product::query()->where('is_active', true)->orderBy('name')->get(),
-            'transactions' => $transactions->orderByDesc('occurred_at')->limit(30)->get(),
+            'transactions' => $transactions->orderByDesc('occurred_at')->paginate($this->pageSize()),
             'posReady' => config('ritelin.pos_token') !== null && config('ritelin.pos_token') !== '',
         ]);
     }

@@ -1,8 +1,8 @@
 <div class="page space-y-6">
     <div class="flex items-end justify-between gap-4">
         <div>
-            <h1 class="page-title">Produk & rak</h1>
-            <p class="page-desc">Satu slot untuk satu jenis produk agar perubahan berat lebih mudah ditafsirkan.</p>
+            <h1 class="page-title">Produk</h1>
+            <p class="page-desc">Nama, SKU, dan berat tiap produk. Pemetaan ke rak ada di halaman Perangkat.</p>
         </div>
         @if (auth()->user()->hasPermission(\App\Enums\PermissionName::ProductsManage))
             <button class="icon-btn" type="button" wire:click="openCreate" title="Produk baru" aria-label="Produk baru">
@@ -14,12 +14,17 @@
     @if ($message !== '')
         <div class="alert alert-info">{{ $message }}</div>
     @endif
+    @include('components.action-confirm')
 
     <section class="card">
+        @error('products') <div class="alert-error mb-3 rounded-lg px-3 py-2">{{ $message }}</div> @enderror
+        <label class="field-label" for="product-search">Cari</label>
+        <input id="product-search" class="field-input mb-4 max-w-md" wire:model.live.debounce.300ms="search" placeholder="Nama, SKU, atau kategori">
         <div class="table-wrap">
             <table class="table">
                 <thead>
                     <tr>
+                        <th>No</th>
                         <th>Produk</th>
                         <th>SKU</th>
                         <th>Harga referensi</th>
@@ -33,6 +38,7 @@
                 <tbody>
                     @forelse ($products as $product)
                         <tr>
+                            <td>{{ $products->firstItem() + $loop->index }}</td>
                             <td>
                                 <div class="flex items-center gap-3">
                                     @if ($product->imageUrl())
@@ -54,59 +60,23 @@
                                         <button class="icon-btn" type="button" wire:click="edit({{ $product->id }})" title="Ubah" aria-label="Ubah {{ $product->name }}">
                                             <x-icon name="pencil" />
                                         </button>
-                                        <button class="icon-btn" type="button" wire:click="toggleProduct({{ $product->id }})" title="{{ $product->is_active ? 'Nonaktifkan' : 'Aktifkan' }}" aria-label="{{ $product->is_active ? 'Nonaktifkan' : 'Aktifkan' }} {{ $product->name }}">
+                                        <button class="icon-btn" type="button" wire:click="ask('toggleProduct', 'Ubah status produk', 'Setujui perubahan status {{ $product->name }} sebelum status diubah.', { productId: {{ $product->id }} })" title="{{ $product->is_active ? 'Nonaktifkan' : 'Aktifkan' }}" aria-label="{{ $product->is_active ? 'Nonaktifkan' : 'Aktifkan' }} {{ $product->name }}">
                                             <x-icon name="{{ $product->is_active ? 'power' : 'check' }}" />
+                                        </button>
+                                        <button class="icon-btn" type="button" wire:click="openDelete({{ $product->id }})" title="Hapus" aria-label="Hapus {{ $product->name }}">
+                                            <x-icon name="trash" />
                                         </button>
                                     </div>
                                 </td>
                             @endif
                         </tr>
                     @empty
-                        <tr><td colspan="6">Belum ada produk.</td></tr>
+                        <tr><td colspan="7">{{ $search === '' ? 'Belum ada produk.' : 'Tidak ada produk yang cocok.' }}</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-    </section>
-
-    <section class="card">
-        <h2 class="mb-3 text-base font-semibold">Pemetaan slot</h2>
-        <div class="table-wrap">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Perangkat</th>
-                        <th>Lokasi</th>
-                        <th>Slot</th>
-                        <th>Produk</th>
-                        <th>Status rak</th>
-                        @if (auth()->user()->hasPermission(\App\Enums\PermissionName::DevicesManage))
-                            <th></th>
-                        @endif
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($devices as $device)
-                        <tr>
-                            <td>{{ $device->code }}</td>
-                            <td>{{ $device->store_location ?: 'Belum diisi' }}</td>
-                            <td>{{ $device->slot_label ?: '—' }}</td>
-                            <td>{{ $device->product->name ?? 'Belum dipetakan' }}</td>
-                            <td>{{ $device->shelf_status?->label() ?? 'Normal' }}</td>
-                            @if (auth()->user()->hasPermission(\App\Enums\PermissionName::DevicesManage))
-                                <td>
-                                    <button class="icon-btn" type="button" wire:click="openMapping({{ $device->id }})" title="Ubah pemetaan" aria-label="Ubah pemetaan {{ $device->code }}">
-                                        <x-icon name="pencil" />
-                                    </button>
-                                </td>
-                            @endif
-                        </tr>
-                    @empty
-                        <tr><td colspan="6">Belum ada perangkat untuk dipetakan.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+        <x-pager :rows="$products" />
     </section>
 
     <x-modal :show="$showProductForm" :title="$editingId ? 'Ubah produk' : 'Produk baru'" close="cancelEdit">
@@ -133,35 +103,20 @@
         <label class="mt-3 flex items-center gap-2 text-sm text-wd-ink">
             <input type="checkbox" wire:model="isActive"> Produk aktif
         </label>
-        <button class="btn btn-primary mt-3" type="button" wire:click="saveProduct">Simpan produk</button>
+        <button class="btn btn-primary mt-3" type="button" wire:click="ask('saveProduct', 'Simpan produk', 'Setujui penyimpanan produk ini?')">Simpan produk</button>
     </x-modal>
 
-    @php $mappingDevice = $devices->firstWhere('id', $mappingDeviceId); @endphp
-    <x-modal :show="$mappingDevice !== null" :title="$mappingDevice ? 'Pemetaan '.$mappingDevice->code : 'Pemetaan'" close="closeMapping">
-        @if ($mappingDevice)
-            @error('mappings') <div class="alert-error mb-3 rounded-lg px-3 py-2">{{ $message }}</div> @enderror
-            <label class="field-label" for="map-location">Lokasi</label>
-            <input id="map-location" class="field-input" wire:model="mappings.{{ $mappingDevice->id }}.store_location">
-            <label class="field-label mt-3" for="map-slot">Slot</label>
-            <input id="map-slot" class="field-input" wire:model="mappings.{{ $mappingDevice->id }}.slot_label">
-            <label class="field-label mt-3" for="map-product">Produk</label>
-            <select id="map-product" class="field-select" wire:model="mappings.{{ $mappingDevice->id }}.product_id">
-                <option value="">Belum dipetakan</option>
-                @foreach ($products as $product)
-                    <option value="{{ $product->id }}">{{ $product->name }}</option>
-                @endforeach
-            </select>
-            <label class="field-label mt-3" for="map-baseline">Berat dasar (gram)</label>
-            <input id="map-baseline" class="field-input" wire:model="mappings.{{ $mappingDevice->id }}.baseline_weight_grams" inputmode="decimal">
-            <label class="field-label mt-3" for="map-threshold">Ambang (gram)</label>
-            <input id="map-threshold" class="field-input" wire:model="mappings.{{ $mappingDevice->id }}.threshold_grams" inputmode="decimal">
-            <label class="field-label mt-3" for="map-status">Status rak</label>
-            <select id="map-status" class="field-select" wire:model="mappings.{{ $mappingDevice->id }}.shelf_status">
-                @foreach ($shelfStatuses as $status)
-                    <option value="{{ $status->value }}">{{ $status->label() }}</option>
-                @endforeach
-            </select>
-            <button class="btn btn-primary mt-3" type="button" wire:click="saveMapping">Simpan pemetaan</button>
+    <x-modal :show="$deletingProduct !== null" :title="$deletingProduct ? 'Hapus '.$deletingProduct->name : 'Hapus produk'" close="closeDelete">
+        @if ($deletingProduct)
+            <p class="text-sm">Setujui penghapusan sebelum data dihapus. Produk {{ $deletingProduct->name }} akan dihapus. Pemetaan rak ke produk ini ikut dilepas.</p>
+            <div wire:loading wire:target="deleteProduct" class="alert alert-info mt-3">Penghapusan sedang dijalankan.</div>
+            <div class="mt-4 flex gap-2">
+                <button class="btn btn-primary" type="button" wire:click="deleteProduct" wire:loading.attr="disabled" wire:target="deleteProduct">
+                    <span wire:loading.remove wire:target="deleteProduct">Hapus</span>
+                    <span wire:loading wire:target="deleteProduct">Menghapus...</span>
+                </button>
+                <button class="btn" type="button" wire:click="closeDelete">Batal</button>
+            </div>
         @endif
     </x-modal>
 </div>

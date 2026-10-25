@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AppSetting;
 use App\Models\Device;
 use App\Models\PosTransaction;
 use App\Models\ShelfEvent;
@@ -18,8 +19,8 @@ class ShelfMatcher
 
     public function reconcile(Device $device): void
     {
-        $window = (int) config('ritelin.match_window_minutes');
-        $lead = (int) config('ritelin.match_lead_minutes');
+        $window = AppSetting::matchWindowMinutes();
+        $lead = AppSetting::matchLeadMinutes();
 
         $removals = $device->events()
             ->where('event_type', 'ITEM_REMOVED')
@@ -36,7 +37,7 @@ class ShelfMatcher
             $end = $removal->occurred_at->copy()->addMinutes($window);
 
             $returned = $device->events()
-                ->where('event_type', 'ITEM_RETURNED')
+                ->whereIn('event_type', ['ITEM_RETURNED', 'ITEM_ADDED'])
                 ->where('occurred_at', '>=', $removal->occurred_at)
                 ->where('occurred_at', '<=', $end)
                 ->exists();
@@ -44,7 +45,7 @@ class ShelfMatcher
             $candidates = $this->candidates($device, $removal, $start, $end);
 
             if ($returned && $candidates->isEmpty()) {
-                $this->store($removal, null, 'returned', 'Berat kembali ke kondisi sebelumnya di dalam jendela waktu.', null);
+                $this->store($removal, null, 'returned', 'Berat naik lagi di dalam jendela waktu.', null);
 
                 continue;
             }

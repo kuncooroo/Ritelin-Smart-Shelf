@@ -25,6 +25,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'shelf_status',
     'sensor_status',
     'last_calibrated_at',
+    'physical_stock',
+    'pos_stock',
+    'stock_drop_units',
+    'stock_status',
+    'stock_watch_from',
+    'stock_watch_until',
+    'tare_requested',
 ])]
 class Device extends Model
 {
@@ -42,6 +49,12 @@ class Device extends Model
             'shelf_status' => ShelfStatus::class,
             'sensor_status' => SensorStatus::class,
             'last_calibrated_at' => 'datetime',
+            'physical_stock' => 'integer',
+            'pos_stock' => 'integer',
+            'stock_drop_units' => 'integer',
+            'stock_watch_from' => 'datetime',
+            'stock_watch_until' => 'datetime',
+            'tare_requested' => 'boolean',
         ];
     }
 
@@ -106,5 +119,25 @@ class Device extends Model
         }
 
         return round((float) $this->last_weight_grams - (float) $this->baseline_weight_grams, 1);
+    }
+
+    public function stockStatusLabel(): string
+    {
+        return match ($this->stock_status) {
+            'aligned' => 'Selaras',
+            'awaiting' => 'Menunggu transaksi',
+            'review' => 'Selisih',
+            'above' => 'Stok alat bertambah',
+            default => 'Belum dihitung',
+        };
+    }
+
+    public function stockGapUnits(): ?int
+    {
+        if ($this->physical_stock === null || $this->pos_stock === null) {
+            return null;
+        }
+
+        return (int) $this->pos_stock - (int) $this->physical_stock;
     }
 }

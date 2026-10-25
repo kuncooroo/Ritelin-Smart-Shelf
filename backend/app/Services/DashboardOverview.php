@@ -15,14 +15,14 @@ class DashboardOverview
     /**
      * @return array<string, mixed>
      */
-    public function present(): array
+    public function present(int $perPage = 10): array
     {
         $this->anomalies->sync();
 
         $devices = Device::query()->with('product')->orderBy('code')->get();
         $today = $this->todayEvents();
         $removed = $today->where('event_type', 'ITEM_REMOVED')->count();
-        $returned = $today->where('event_type', 'ITEM_RETURNED')->count();
+        $returned = $today->whereIn('event_type', ['ITEM_RETURNED', 'ITEM_ADDED'])->count();
         $hours = $this->hours($today);
 
         return [
@@ -42,10 +42,14 @@ class DashboardOverview
                 ->with(['device.product', 'transaction'])
                 ->orderByDesc('occurred_at')
                 ->orderByDesc('id')
-                ->limit(8)
-                ->get(),
-            'devices' => $devices,
+                ->paginate($this->pageSize($perPage), ['*'], 'recent'),
+            'devices' => Device::query()->with('product')->orderBy('code')->paginate($this->pageSize($perPage), ['*'], 'devices'),
         ];
+    }
+
+    private function pageSize(int $perPage): int
+    {
+        return in_array($perPage, [10, 25, 50], true) ? $perPage : 10;
     }
 
     /**
@@ -74,7 +78,7 @@ class DashboardOverview
 
         foreach ($events as $event) {
             $hour = (int) $event->occurred_at->timezone('Asia/Jakarta')->format('G');
-            $key = $event->event_type === 'ITEM_RETURNED' ? 'returned' : 'removed';
+            $key = $event->event_type === 'ITEM_REMOVED' ? 'removed' : 'returned';
             $buckets[$hour][$key]++;
         }
 

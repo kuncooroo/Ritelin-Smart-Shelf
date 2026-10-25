@@ -11,7 +11,7 @@
 </head>
 <body class="min-h-screen text-white antialiased selection:bg-emerald-500 selection:text-white">
     <div class="relative min-h-screen overflow-hidden">
-    <div class="absolute inset-0" style="background-image: url('{{ asset('images/login.jpg') }}'); background-size: cover; background-position: center; background-repeat: no-repeat;"></div>
+    <div class="absolute inset-0" style="background-image: url('{{ asset('images/login.jpeg') }}'); background-size: cover; background-position: center; background-repeat: no-repeat;"></div>
         <main class="relative z-10 mx-auto flex min-h-screen max-w-md items-center justify-center px-4 py-10">
             <div class="w-full rounded-3xl border border-white/20 bg-white/10 p-8 shadow-2xl backdrop-blur-xl">
                 @yield('content')

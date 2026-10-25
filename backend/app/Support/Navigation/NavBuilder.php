@@ -3,6 +3,7 @@
 namespace App\Support\Navigation;
 
 use App\Models\User;
+use App\Support\Attention;
 use App\Support\Authorization\NavPermissionMap;
 use Illuminate\Support\Facades\Route;
 
@@ -46,13 +47,13 @@ final class NavBuilder
             'Operasi' => [
                 ['key' => 'home', 'label' => 'Beranda', 'route' => 'dashboard'],
                 ['key' => 'devices', 'label' => 'Perangkat', 'route' => 'dashboard.devices', 'active' => 'dashboard.devices*'],
-                ['key' => 'products', 'label' => 'Produk & rak', 'route' => 'dashboard.products'],
+                ['key' => 'products', 'label' => 'Produk', 'route' => 'dashboard.products'],
                 ['key' => 'sensors', 'label' => 'Monitoring sensor', 'route' => 'dashboard.sensors'],
                 ['key' => 'events', 'label' => 'Riwayat aktivitas', 'route' => 'dashboard.events'],
                 ['key' => 'anomalies', 'label' => 'Anomali', 'route' => 'dashboard.anomalies'],
                 ['key' => 'pos', 'label' => 'Transaksi kasir', 'route' => 'dashboard.pos'],
                 ['key' => 'reconciliation', 'label' => 'Rekonsiliasi', 'route' => 'dashboard.reconciliation'],
-                ['key' => 'reports', 'label' => 'Laporan', 'route' => 'dashboard.reports'],
+                ['key' => 'reports', 'label' => 'Laporan & Analisis', 'route' => 'dashboard.reports'],
             ],
             'Administrasi' => [
                 ['key' => 'settings', 'label' => 'Pengaturan', 'route' => 'dashboard.settings'],
@@ -75,6 +76,11 @@ final class NavBuilder
             'label' => $item['label'],
             'url' => $url,
             'active' => $url !== null && request()->routeIs($item['active'] ?? $route),
+            'alert' => match ($item['key']) {
+                'anomalies' => Attention::unreadAnomalies(),
+                'reconciliation' => Attention::unreadReconciliation(),
+                default => 0,
+            },
         ];
     }
 }

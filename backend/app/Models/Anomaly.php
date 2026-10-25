@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'status',
     'note',
     'ignore_reason',
+    'checked_at',
 ])]
 class Anomaly extends Model
 {
@@ -35,6 +36,7 @@ class Anomaly extends Model
             'kind' => AnomalyKind::class,
             'priority' => AnomalyPriority::class,
             'status' => AnomalyStatus::class,
+            'checked_at' => 'datetime',
         ];
     }
 
@@ -51,5 +53,11 @@ class Anomaly extends Model
     public function failure(): BelongsTo
     {
         return $this->belongsTo(ProcessingFailure::class, 'processing_failure_id');
+    }
+
+    public function isUnread(): bool
+    {
+        return $this->checked_at === null
+            && in_array($this->status, [AnomalyStatus::New, AnomalyStatus::Reviewing], true);
     }
 }

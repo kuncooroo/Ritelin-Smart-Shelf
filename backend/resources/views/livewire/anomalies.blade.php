@@ -7,6 +7,7 @@
     @if ($message !== '')
         <div class="alert alert-info">{{ $message }}</div>
     @endif
+    @include('components.action-confirm')
 
     <section class="card">
         <div class="grid gap-3 md:grid-cols-3">
@@ -55,7 +56,7 @@
                 <label class="field-label mt-3" for="ignore-reason">Alasan jika diabaikan</label>
                 <input id="ignore-reason" class="field-input" wire:model="ignoreReason">
                 @error('ignoreReason') <div class="alert-error mt-2 rounded-lg px-3 py-2">{{ $message }}</div> @enderror
-                <button class="btn btn-primary mt-3" type="button" wire:click="saveFollowUp">Simpan tindak lanjut</button>
+                <button class="btn btn-primary mt-3" type="button" wire:click="ask('saveFollowUp', 'Simpan tindak lanjut', 'Setujui catatan tindak lanjut sebelum disimpan?')">Simpan tindak lanjut</button>
             @else
                 <p class="mt-3 text-sm text-wd-muted">Catatan: {{ $selected->note ?: 'Belum ada' }}</p>
             @endif
@@ -67,6 +68,7 @@
             <table class="table table-wide">
                 <thead>
                     <tr>
+                        <th>No</th>
                         <th>Judul</th>
                         <th>Perangkat</th>
                         <th>Jenis</th>
@@ -77,7 +79,8 @@
                 </thead>
                 <tbody>
                     @forelse ($anomalies as $anomaly)
-                        <tr>
+                        <tr @class(['row-unread' => $anomaly->isUnread()])>
+                            <td>{{ $anomalies->firstItem() + $loop->index }}</td>
                             <td>
                                 {{ $anomaly->title }}
                                 <div class="text-xs text-wd-muted">{{ $anomaly->summary }}</div>
@@ -98,10 +101,11 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6">Belum ada anomali yang perlu diperiksa.</td></tr>
+                        <tr><td colspan="7">Belum ada anomali yang perlu diperiksa.</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+        <x-pager :rows="$anomalies" />
     </section>
 </div>

@@ -1,8 +1,8 @@
 <div class="page space-y-6">
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
-            <h1 class="page-title">Laporan</h1>
-            <p class="page-desc">Aktivitas rak, pencocokan, dan performa perangkat. Nilai uang tidak dihitung dari perubahan berat.</p>
+            <h1 class="page-title">Laporan & Analisis</h1>
+            <p class="page-desc">Rangkuman, diagram aktivitas, dan pencocokan rak. Nilai uang tidak dihitung dari perubahan berat.</p>
         </div>
         <div class="flex flex-wrap gap-2">
             <a class="btn" href="{{ route('dashboard.reports.csv', ['from' => $report['from'], 'to' => $report['to']]) }}">Unduh CSV</a>
@@ -31,7 +31,7 @@
         @foreach ([
             'Peristiwa' => $report['totals']['events'],
             'Diambil' => $report['totals']['removed'],
-            'Dikembalikan' => $report['totals']['returned'],
+            'Berat naik' => $report['totals']['returned'],
             'Transaksi' => $report['totals']['transactions'],
             'Cocok' => $report['totals']['matched'],
             'Belum cocok' => $report['totals']['unmatched'],
@@ -45,14 +45,17 @@
         @endforeach
     </div>
 
+    <x-report-charts :report="$report" />
+
     <section class="card">
         <h2 class="mb-3 text-base font-semibold">Aktivitas per hari</h2>
         <div class="table-wrap">
             <table class="table">
-                <thead><tr><th>Tanggal</th><th>Diambil</th><th>Dikembalikan</th><th>Transaksi</th><th>Anomali</th></tr></thead>
+                <thead><tr><th>No</th><th>Tanggal</th><th>Diambil</th><th>Berat naik</th><th>Transaksi</th><th>Anomali</th></tr></thead>
                 <tbody>
-                    @foreach ($report['days'] as $day)
+                    @foreach ($days as $day)
                         <tr>
+                            <td>{{ $days->firstItem() + $loop->index }}</td>
                             <td>{{ $day['date'] }}</td>
                             <td>{{ $day['removed'] }}</td>
                             <td>{{ $day['returned'] }}</td>
@@ -63,6 +66,7 @@
                 </tbody>
             </table>
         </div>
+        <x-pager :rows="$days" />
     </section>
 
     <div class="grid gap-4 lg:grid-cols-2">
@@ -70,39 +74,43 @@
             <h2 class="mb-3 text-base font-semibold">Produk paling sering diambil</h2>
             <div class="table-wrap">
                 <table class="table">
-                    <thead><tr><th>Produk</th><th>SKU</th><th>Diambil</th></tr></thead>
+                    <thead><tr><th>No</th><th>Produk</th><th>SKU</th><th>Diambil</th></tr></thead>
                     <tbody>
-                        @forelse ($report['products'] as $product)
+                        @forelse ($products as $product)
                             <tr>
+                                <td>{{ $products->firstItem() + $loop->index }}</td>
                                 <td>{{ $product['name'] }}</td>
                                 <td>{{ $product['sku'] }}</td>
                                 <td>{{ $product['removed'] }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="3">Belum ada pengambilan pada rentang ini.</td></tr>
+                            <tr><td colspan="4">Belum ada pengambilan pada rentang ini.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
+            <x-pager :rows="$products" />
         </section>
         <section class="card">
             <h2 class="mb-3 text-base font-semibold">Anomali per rak</h2>
             <div class="table-wrap">
                 <table class="table">
-                    <thead><tr><th>Perangkat</th><th>Produk</th><th>Jumlah</th></tr></thead>
+                    <thead><tr><th>No</th><th>Perangkat</th><th>Produk</th><th>Jumlah</th></tr></thead>
                     <tbody>
-                        @forelse ($report['shelves'] as $shelf)
+                        @forelse ($shelves as $shelf)
                             <tr>
+                                <td>{{ $shelves->firstItem() + $loop->index }}</td>
                                 <td>{{ $shelf['code'] }}</td>
                                 <td>{{ $shelf['product'] }}</td>
                                 <td>{{ $shelf['count'] }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="3">Belum ada anomali pada rentang ini.</td></tr>
+                            <tr><td colspan="4">Belum ada anomali pada rentang ini.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
+            <x-pager :rows="$shelves" />
         </section>
     </div>
 
@@ -110,10 +118,11 @@
         <h2 class="mb-3 text-base font-semibold">Performa perangkat</h2>
         <div class="table-wrap">
             <table class="table">
-                <thead><tr><th>ID</th><th>Nama</th><th>Koneksi</th><th>Terakhir mengirim</th><th>Peristiwa</th><th>Anomali</th></tr></thead>
+                <thead><tr><th>No</th><th>ID</th><th>Nama</th><th>Koneksi</th><th>Terakhir mengirim</th><th>Peristiwa</th><th>Anomali</th></tr></thead>
                 <tbody>
-                    @forelse ($report['devices'] as $device)
+                    @forelse ($deviceRows as $device)
                         <tr>
+                            <td>{{ $deviceRows->firstItem() + $loop->index }}</td>
                             <td>{{ $device['code'] }}</td>
                             <td>{{ $device['name'] }}</td>
                             <td>{{ $device['connection'] }}</td>
@@ -122,10 +131,11 @@
                             <td>{{ $device['anomalies'] }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="6">Belum ada perangkat.</td></tr>
+                        <tr><td colspan="7">Belum ada perangkat.</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+        <x-pager :rows="$deviceRows" />
     </section>
 </div>

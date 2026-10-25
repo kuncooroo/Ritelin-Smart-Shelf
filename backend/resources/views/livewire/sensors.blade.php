@@ -6,9 +6,45 @@
     <x-shelf-disclaimer />
 
     <section class="card">
+        <h2 class="mb-3 text-base font-semibold">Stok alat dan stok transaksi</h2>
+        <p class="mb-3 text-sm text-wd-muted">Stok fisik = pembulatan ke bawah dari berat sensor dibagi berat referensi unit. Jendela transaksi stok adalah {{ \App\Models\AppSetting::stockWindowMinutes() }} menit.</p>
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Slot</th>
+                        <th>SKU</th>
+                        <th>Stok fisik</th>
+                        <th>Stok transaksi</th>
+                        <th>Selisih</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($devices as $row)
+                        <tr>
+                            <td>{{ $devices->firstItem() + $loop->index }}</td>
+                            <td>{{ $row->code }}<div class="text-xs text-wd-muted">{{ $row->slot_label ?: 'Tanpa slot' }}</div></td>
+                            <td>{{ $row->product->sku ?? 'Belum dipetakan' }}</td>
+                            <td>{{ $row->physical_stock === null ? '—' : $row->physical_stock }}</td>
+                            <td>{{ $row->pos_stock === null ? '—' : $row->pos_stock }}</td>
+                            <td>{{ $row->stockGapUnits() === null ? '—' : $row->stockGapUnits() }}</td>
+                            <td>{{ $row->stockStatusLabel() }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="7">Belum ada perangkat.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        <x-pager :rows="$devices" />
+    </section>
+
+    <section class="card">
         <label class="field-label" for="sensor-device">Perangkat</label>
         <select id="sensor-device" class="field-select max-w-md" wire:model.live="code">
-            @foreach ($devices as $option)
+            @foreach ($choices as $option)
                 <option value="{{ $option->code }}">{{ $option->code }} — {{ $option->name }}</option>
             @endforeach
         </select>
@@ -66,23 +102,26 @@
             <div class="table-wrap">
                 <table class="table">
                     <thead>
-                        <tr><th>Waktu (WIB)</th><th>Berat</th><th>Selisih dari sebelumnya</th><th>Sumber</th></tr>
+                        <tr><th>No</th><th>Waktu (WIB)</th><th>Berat</th><th>Selisih dari sebelumnya</th><th>Sumber</th></tr>
                     </thead>
                     <tbody>
-                        @forelse ($readings as $index => $reading)
-                            @php $older = $readings[$index + 1] ?? null; @endphp
+                        @php $readingRows = $readings->getCollection()->values(); @endphp
+                        @forelse ($readingRows as $index => $reading)
+                            @php $older = $readingRows[$index + 1] ?? null; @endphp
                             <tr>
+                                <td>{{ $readings->firstItem() + $index }}</td>
                                 <td>{{ $reading->recorded_at->timezone('Asia/Jakarta')->format('d-m-Y H:i:s') }}</td>
                                 <td>{{ $reading->weight_grams }} g</td>
                                 <td>{{ $older === null ? '—' : round((float) $reading->weight_grams - (float) $older->weight_grams, 1).' g' }}</td>
                                 <td>{{ $reading->sourceLabel() }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="4">Belum ada pembacaan.</td></tr>
+                            <tr><td colspan="5">Belum ada pembacaan.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
+            <x-pager :rows="$readings" />
         </section>
     @else
         <section class="card">Belum ada perangkat.</section>

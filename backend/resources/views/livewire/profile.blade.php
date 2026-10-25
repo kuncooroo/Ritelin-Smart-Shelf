@@ -7,6 +7,7 @@
         @if ($message !== '')
             <div class="alert alert-info">{{ $message }}</div>
         @endif
+        @include('components.action-confirm')
         <label class="field-label" for="profile-name">Nama</label>
         <input id="profile-name" class="field-input" wire:model="name">
         @error('name') <div class="alert-error rounded-lg px-3 py-2">{{ $message }}</div> @enderror
@@ -18,6 +19,6 @@
         @error('password') <div class="alert-error rounded-lg px-3 py-2">{{ $message }}</div> @enderror
         <label class="field-label" for="profile-password-confirmation">Ulangi sandi baru</label>
         <input id="profile-password-confirmation" class="field-input" type="password" wire:model="passwordConfirmation" autocomplete="new-password">
-        <button class="btn btn-primary" type="button" wire:click="save">Simpan profil</button>
+        <button class="btn btn-primary" type="button" wire:click="ask('save', 'Simpan profil', 'Setujui perubahan profil sebelum disimpan?')">Simpan profil</button>
     </section>
 </div>

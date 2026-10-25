@@ -3,6 +3,9 @@
 namespace App\Livewire;
 
 use App\Livewire\Concerns\AuthorizesShelf;
+use App\Livewire\Concerns\ConfirmsActions;
+use App\Livewire\Concerns\RefreshesWithDashboard;
+use App\Livewire\Concerns\WithPageSize;
 use App\Models\PosTransaction;
 use App\Models\ShelfEvent;
 use App\Services\AnomalySync;
@@ -11,11 +14,16 @@ use App\Services\ShelfMatcher;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 #[Layout('layouts.app', ['title' => 'Rekonsiliasi'])]
 class Reconciliation extends Component
 {
     use AuthorizesShelf;
+    use ConfirmsActions;
+    use RefreshesWithDashboard;
+    use WithPageSize;
+    use WithPagination;
 
     public ?int $noteEventId = null;
 
@@ -32,6 +40,10 @@ class Reconciliation extends Component
     public function editNote(int $eventId): void
     {
         $event = ShelfEvent::query()->findOrFail($eventId);
+        if ($event->checked_at === null) {
+            $event->checked_at = now();
+            $event->save();
+        }
         $this->noteEventId = $event->id;
         $this->staffNote = (string) $event->staff_note;
         $this->resetValidation();
@@ -62,25 +74,40 @@ class Reconciliation extends Component
 
     public function render(): View
     {
-        $events = ShelfEvent::query()
-            ->with(['device.product', 'transaction'])
-            ->where('event_type', 'ITEM_REMOVED')
-            ->orderByDesc('occurred_at')
-            ->limit(80)
-            ->get();
-
         return view('livewire.reconciliation', [
-            'matched' => $events->where('match_status', 'matched')->values(),
-            'review' => $events->where('match_status', 'needs_review')->values(),
-            'unmatched' => $events->where('match_status', 'unmatched')->values(),
-            'pending' => $events->where('match_status', 'pending')->values(),
+            'matched' => $this->group('matched', 'matchedPage'),
+            'review' => $this->group('needs_review', 'reviewPage'),
+            'unmatched' => $this->group('unmatched', 'unmatchedPage'),
+            'pending' => $this->group('pending', 'pendingPage'),
             'transactions' => PosTransaction::query()
                 ->with(['product', 'shelfEvent.device'])
                 ->whereDoesntHave('shelfEvent')
                 ->orderByDesc('occurred_at')
-                ->limit(40)
-                ->get(),
+                ->paginate($this->pageSize(), ['*'], 'posPage'),
             'noteEvent' => $this->noteEventId === null ? null : ShelfEvent::query()->find($this->noteEventId),
         ]);
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function confirmableActions(): array
+    {
+        return ['saveNote'];
+    }
+
+    protected function pageNames(): array
+    {
+        return ['matchedPage', 'reviewPage', 'unmatchedPage', 'pendingPage', 'posPage'];
+    }
+
+    private function group(string $status, string $pageName): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    {
+        return ShelfEvent::query()
+            ->with(['device.product', 'transaction'])
+            ->where('event_type', 'ITEM_REMOVED')
+            ->where('match_status', $status)
+            ->orderByDesc('occurred_at')
+            ->paginate($this->pageSize(), ['*'], $pageName);
     }
 }

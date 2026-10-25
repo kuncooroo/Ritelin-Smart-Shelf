@@ -89,7 +89,7 @@ class ShelfReport
             if (! isset($days[$key])) {
                 continue;
             }
-            $days[$key][$event->event_type === 'ITEM_RETURNED' ? 'returned' : 'removed']++;
+            $days[$key][$event->event_type === 'ITEM_REMOVED' ? 'removed' : 'returned']++;
         }
 
         foreach ($transactions as $transaction) {
@@ -157,7 +157,7 @@ class ShelfReport
             'totals' => [
                 'events' => $events->count(),
                 'removed' => $events->where('event_type', 'ITEM_REMOVED')->count(),
-                'returned' => $events->where('event_type', 'ITEM_RETURNED')->count(),
+                'returned' => $events->whereIn('event_type', ['ITEM_RETURNED', 'ITEM_ADDED'])->count(),
                 'transactions' => $transactions->count(),
                 'matched' => $events->where('match_status', 'matched')->count(),
                 'unmatched' => $events->where('match_status', 'unmatched')->count(),

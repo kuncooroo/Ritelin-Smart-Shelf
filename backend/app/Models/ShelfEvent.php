@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'match_note',
     'staff_note',
     'pos_transaction_id',
+    'checked_at',
 ])]
 class ShelfEvent extends Model
 {
@@ -30,6 +31,7 @@ class ShelfEvent extends Model
             'weight_grams' => 'decimal:1',
             'weight_before_grams' => 'decimal:1',
             'occurred_at' => 'datetime',
+            'checked_at' => 'datetime',
         ];
     }
 
@@ -43,9 +45,20 @@ class ShelfEvent extends Model
         return $this->belongsTo(PosTransaction::class, 'pos_transaction_id');
     }
 
+    public function isUnread(): bool
+    {
+        return $this->checked_at === null
+            && $this->event_type === 'ITEM_REMOVED'
+            && in_array($this->match_status, ['needs_review', 'unmatched', 'pending'], true);
+    }
+
     public function activityLabel(): string
     {
-        return $this->event_type === 'ITEM_REMOVED' ? 'Barang diambil' : 'Barang dikembalikan';
+        return match ($this->event_type) {
+            'ITEM_REMOVED' => 'Barang diambil',
+            'ITEM_ADDED' => 'Barang ditambah',
+            default => 'Barang dikembalikan',
+        };
     }
 
     public function matchLabel(): string

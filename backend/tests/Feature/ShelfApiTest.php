@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Events\DashboardUpdated;
+use App\Models\Anomaly;
 use App\Models\Device;
 use App\Models\PosTransaction;
 use App\Models\Product;
@@ -9,11 +11,18 @@ use App\Models\ShelfEvent;
 use App\Services\ShelfMatcher;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 class ShelfApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
 
     protected function setUp(): void
     {
@@ -22,6 +31,7 @@ class ShelfApiTest extends TestCase
             'ritelin.pos_token' => 'pos-secret',
             'ritelin.match_window_minutes' => 10,
             'ritelin.match_lead_minutes' => 2,
+            'ritelin.stock_window_minutes' => 2,
         ]);
     }
 
@@ -165,6 +175,110 @@ class ShelfApiTest extends TestCase
         $this->assertSame('unmatched', ShelfEvent::query()->where('event_id', 'evt-000400')->first()->match_status);
     }
 
+    public function test_physical_stock_uses_floor_and_matches_a_pos_drop(): void
+    {
+        $product = Product::query()->create([
+            'name' => 'Parfum',
+            'sku' => 'PARFUM-DEMO',
+            'unit_weight_grams' => 80,
+        ]);
+        $device = $this->device($product);
+        $device->forceFill(['baseline_weight_grams' => 0])->save();
+        Carbon::setTestNow('2026-10-23 01:30:00');
+
+        $this->assertSame(2, \App\Services\PhysicalStock::units(232, 80));
+        $this->assertSame(2, \App\Services\PhysicalStock::units(239, 80));
+        $this->assertSame(1, \App\Services\PhysicalStock::units(95, 80));
+
+        $this->postJson('/api/events', $this->weighed('evt-stock-1', 232), $this->deviceHeaders())->assertCreated();
+        $device->refresh();
+        $this->assertSame(2, $device->physical_stock);
+        $this->assertSame(2, $device->pos_stock);
+        $this->assertSame('aligned', $device->stock_status);
+
+        $this->postJson('/api/events', $this->weighed('evt-stock-2', 80, '2026-10-23T01:31:00Z'), $this->deviceHeaders())->assertCreated();
+        $device->refresh();
+        $this->assertSame(1, $device->physical_stock);
+        $this->assertSame(2, $device->pos_stock);
+        $this->assertSame('awaiting', $device->stock_status);
+
+        $this->postJson('/api/pos/transactions', [
+            'external_id' => 'POS-STOCK',
+            'sku' => 'PARFUM-DEMO',
+            'quantity' => 1,
+            'timestamp' => '2026-10-23T01:32:00Z',
+        ], ['X-Pos-Token' => 'pos-secret', 'Accept' => 'application/json'])->assertCreated();
+
+        $device->refresh();
+        $this->assertSame(1, $device->pos_stock);
+        $this->assertSame('aligned', $device->stock_status);
+    }
+
+    public function test_unmatched_stock_drop_opens_a_review_without_theft_words(): void
+    {
+        $product = Product::query()->create([
+            'name' => 'Parfum',
+            'sku' => 'PARFUM-DEMO',
+            'unit_weight_grams' => 80,
+        ]);
+        $device = $this->device($product);
+        $device->forceFill(['baseline_weight_grams' => 0])->save();
+        Carbon::setTestNow('2026-10-23 02:00:00');
+
+        $this->postJson('/api/events', $this->weighed('evt-gap-1', 160, '2026-10-23T02:00:00Z'), $this->deviceHeaders())->assertCreated();
+        $this->postJson('/api/events', $this->weighed('evt-gap-2', 80, '2026-10-23T02:01:00Z'), $this->deviceHeaders())->assertCreated();
+
+        Carbon::setTestNow('2026-10-23 02:04:00');
+        app(\App\Services\AnomalySync::class)->sync();
+
+        $device->refresh();
+        $this->assertSame('review', $device->stock_status);
+        $this->assertSame(1, $device->stockGapUnits());
+        $anomaly = Anomaly::query()->where('kind', 'stock_gap')->first();
+        $this->assertNotNull($anomaly);
+        $this->assertSame('Anomali — perlu pemeriksaan', $anomaly->title);
+        $this->assertStringNotContainsString('hilang', $anomaly->summary);
+        $this->assertStringNotContainsString('dicuri', $anomaly->summary);
+    }
+
+    public function test_dashboard_tare_is_polled_then_stored(): void
+    {
+        $product = Product::query()->create([
+            'name' => 'Parfum',
+            'sku' => 'PARFUM-DEMO',
+            'unit_weight_grams' => 80,
+        ]);
+        $device = $this->device($product);
+        $device->forceFill(['tare_requested' => true, 'baseline_weight_grams' => 40])->save();
+
+        $this->getJson('/api/config', $this->deviceHeaders())
+            ->assertOk()
+            ->assertJsonPath('tare', true)
+            ->assertJsonPath('threshold_grams', 15);
+
+        $this->postJson('/api/tare', [
+            'device_id' => 'SHELF-001',
+            'weight_grams' => 0,
+        ], $this->deviceHeaders())->assertOk();
+
+        $device->refresh();
+        $this->assertFalse($device->tare_requested);
+        $this->assertSame('0.0', $device->baseline_weight_grams);
+        $this->assertSame(0, $device->physical_stock);
+        $this->assertSame(0, $device->pos_stock);
+    }
+
+    public function test_new_shelf_data_notifies_open_dashboards(): void
+    {
+        $this->device();
+        Event::fake([DashboardUpdated::class]);
+
+        $this->postJson('/api/events', $this->eventPayload(), $this->deviceHeaders())
+            ->assertCreated();
+
+        Event::assertDispatched(DashboardUpdated::class);
+    }
+
     private function device(?Product $product = null, string $code = 'SHELF-001', string $token = 'device-token'): Device
     {
         return Device::query()->create([
@@ -188,6 +302,23 @@ class ShelfApiTest extends TestCase
             'event_id' => $eventId,
             'event_type' => 'ITEM_REMOVED',
             'weight_grams' => 12.4,
+            'timestamp' => $timestamp,
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    /**
+     * @return array<string, mixed>
+     */
+    private function weighed(string $eventId, float $grams, string $timestamp = '2026-10-23T01:30:00Z'): array
+    {
+        return [
+            'device_id' => 'SHELF-001',
+            'event_id' => $eventId,
+            'event_type' => 'ITEM_REMOVED',
+            'weight_grams' => $grams,
             'timestamp' => $timestamp,
         ];
     }

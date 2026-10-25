@@ -20,6 +20,7 @@
             <table class="table table-wide">
                 <thead>
                     <tr>
+                        <th>No</th>
                         <th>ID transaksi</th>
                         <th>Waktu (WIB)</th>
                         <th>SKU</th>
@@ -31,6 +32,7 @@
                 <tbody>
                     @forelse ($transactions as $transaction)
                         <tr>
+                            <td>{{ $transactions->firstItem() + $loop->index }}</td>
                             <td>{{ $transaction->external_id }}</td>
                             <td>{{ $transaction->occurred_at->timezone('Asia/Jakarta')->format('d-m-Y H:i') }}</td>
                             <td>{{ $transaction->product->sku }}</td>
@@ -39,11 +41,12 @@
                             <td>{{ $transaction->shelfLinkLabel() }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="6">Belum ada transaksi.</td></tr>
+                        <tr><td colspan="7">Belum ada transaksi.</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+        <x-pager :rows="$transactions" />
     </section>
 
     <x-modal :show="$showRecord" title="Catat transaksi" close="closeRecord">

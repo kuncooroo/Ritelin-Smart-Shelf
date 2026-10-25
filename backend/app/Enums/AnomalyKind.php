@@ -8,6 +8,7 @@ enum AnomalyKind: string
     case Sensor = 'sensor';
     case Offline = 'offline';
     case Delivery = 'delivery';
+    case StockGap = 'stock_gap';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum AnomalyKind: string
             self::Sensor => 'Sensor',
             self::Offline => 'Perangkat offline',
             self::Delivery => 'Gagal diproses',
+            self::StockGap => 'Selisih stok',
         };
     }
 }

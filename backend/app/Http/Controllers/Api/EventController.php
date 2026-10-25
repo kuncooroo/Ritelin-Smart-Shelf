@@ -9,6 +9,7 @@ use App\Models\WeightReading;
 use App\Services\AnomalySync;
 use App\Services\ProcessingFailureRecorder;
 use App\Services\ShelfMatcher;
+use App\Services\StockLedger;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,6 +24,7 @@ class EventController extends Controller
         ShelfMatcher $matcher,
         AnomalySync $anomalies,
         ProcessingFailureRecorder $failures,
+        StockLedger $stock,
     ): JsonResponse {
         /** @var Device $device */
         $device = $request->attributes->get('device');
@@ -30,7 +32,7 @@ class EventController extends Controller
         $validator = Validator::make($request->all(), [
             'device_id' => ['required', 'string', 'max:32', 'in:'.$device->code],
             'event_id' => ['required', 'string', 'max:32', 'regex:/^evt-[A-Za-z0-9_-]+$/'],
-            'event_type' => ['required', 'in:ITEM_REMOVED,ITEM_RETURNED'],
+            'event_type' => ['required', 'in:ITEM_REMOVED,ITEM_RETURNED,ITEM_ADDED'],
             'weight_grams' => ['required', 'numeric', 'between:-5000,5000'],
             'timestamp' => ['required', 'regex:/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/'],
         ]);
@@ -82,10 +84,11 @@ class EventController extends Controller
             return $this->payload($device, $event, true, 200);
         }
 
+        $stock->apply($device->fresh());
         $matcher->reconcile($device->fresh());
         $anomalies->sync();
 
-        return $this->payload($device, $event->fresh(), false, 201);
+        return $this->payload($device->fresh(), $event->fresh(), false, 201);
     }
 
     private function touchDevice(Request $request, Device $device, mixed $weight): void
@@ -112,6 +115,8 @@ class EventController extends Controller
                 'event_type' => $event->event_type,
                 'weight_grams' => (float) $event->weight_grams,
                 'timestamp' => $event->occurred_at->utc()->format('Y-m-d\TH:i:s\Z'),
+                'physical_stock' => $device->physical_stock,
+                'stock_status' => $device->stock_status,
             ],
         ], $status);
     }

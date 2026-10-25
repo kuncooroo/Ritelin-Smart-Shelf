@@ -34,6 +34,7 @@
                 <select id="filter-type" class="field-select" wire:model="eventType">
                     <option value="">Semua jenis</option>
                     <option value="ITEM_REMOVED">Barang diambil</option>
+                    <option value="ITEM_ADDED">Barang ditambah</option>
                     <option value="ITEM_RETURNED">Barang dikembalikan</option>
                 </select>
             </div>
@@ -60,6 +61,7 @@
             <table class="table table-wide">
                 <thead>
                     <tr>
+                        <th>No</th>
                         <th>Waktu (WIB)</th>
                         <th>ID peristiwa</th>
                         <th>Perangkat</th>
@@ -74,6 +76,7 @@
                 <tbody>
                     @forelse ($events as $event)
                         <tr>
+                            <td>{{ $events->firstItem() + $loop->index }}</td>
                             <td>{{ $event->occurred_at->timezone('Asia/Jakarta')->format('d-m-Y H:i:s') }}</td>
                             <td>{{ $event->event_id }}</td>
                             <td>{{ $event->device->code }}<div class="text-xs text-wd-muted">{{ $event->device->slot_label ?: 'Tanpa slot' }}</div></td>
@@ -94,10 +97,11 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="9">Belum ada aktivitas rak.</td></tr>
+                        <tr><td colspan="10">Belum ada aktivitas rak.</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+        <x-pager :rows="$events" />
     </section>
 </div>

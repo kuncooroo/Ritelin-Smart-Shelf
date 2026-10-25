@@ -12,11 +12,17 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
+use App\Livewire\Concerns\RefreshesWithDashboard;
+use App\Livewire\Concerns\WithPageSize;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 #[Layout('layouts.app', ['title' => 'Riwayat aktivitas'])]
 class Events extends Component
 {
+    use RefreshesWithDashboard;
+    use WithPageSize;
+    use WithPagination;
     #[Url]
     public string $date = '';
 
@@ -43,7 +49,7 @@ class Events extends Component
             'date' => $this->date === '' ? ['nullable'] : ['date'],
             'productId' => $this->productId === '' ? ['nullable'] : ['exists:products,id'],
             'deviceId' => $this->deviceId === '' ? ['nullable'] : ['exists:devices,id'],
-            'eventType' => $this->eventType === '' ? ['nullable'] : [Rule::in(['ITEM_REMOVED', 'ITEM_RETURNED'])],
+            'eventType' => $this->eventType === '' ? ['nullable'] : [Rule::in(['ITEM_REMOVED', 'ITEM_RETURNED', 'ITEM_ADDED'])],
         ]);
         $this->detailId = null;
     }
@@ -85,7 +91,7 @@ class Events extends Component
             $query->where('event_type', $this->eventType);
         }
 
-        $events = $query->orderByDesc('occurred_at')->orderByDesc('id')->limit(100)->get();
+        $events = $query->orderByDesc('occurred_at')->orderByDesc('id')->paginate($this->pageSize());
 
         return view('livewire.events', [
             'events' => $events,

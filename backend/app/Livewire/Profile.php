@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\ConfirmsActions;
 use App\Models\User;
 use App\Services\AuditLogger;
 use Illuminate\Validation\Rules\Password;
@@ -12,6 +13,8 @@ use Livewire\Component;
 #[Layout('layouts.app', ['title' => 'Profil'])]
 class Profile extends Component
 {
+    use ConfirmsActions;
+
     public string $name = '';
 
     public string $currentPassword = '';
@@ -45,6 +48,14 @@ class Profile extends Component
         $audit->record('profile.updated', 'Profil '.$user->email.' diperbarui.', $user);
         $this->reset('currentPassword', 'password', 'passwordConfirmation');
         $this->message = 'Profil disimpan.';
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function confirmableActions(): array
+    {
+        return ['save'];
     }
 
     public function render(): View

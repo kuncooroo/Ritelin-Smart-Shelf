@@ -7,12 +7,13 @@
     @if ($message !== '')
         <div class="alert alert-info">{{ $message }}</div>
     @endif
+    @include('components.action-confirm')
 
     @if ($noteEvent)
         <x-modal :show="true" :title="'Catatan '.$noteEvent->event_id" close="closeNote">
             <textarea class="field-input" rows="3" wire:model="staffNote"></textarea>
             @error('staffNote') <div class="alert-error mt-2 rounded-lg px-3 py-2">{{ $message }}</div> @enderror
-            <button class="btn btn-primary mt-3" type="button" wire:click="saveNote">Simpan catatan</button>
+            <button class="btn btn-primary mt-3" type="button" wire:click="ask('saveNote', 'Simpan catatan', 'Setujui catatan verifikasi sebelum disimpan?')">Simpan catatan</button>
         </x-modal>
     @endif
 
@@ -28,6 +29,7 @@
                 <table class="table table-wide">
                     <thead>
                         <tr>
+                            <th>No</th>
                             <th>Peristiwa</th>
                             <th>Waktu rak (WIB)</th>
                             <th>Transaksi</th>
@@ -38,7 +40,8 @@
                     </thead>
                     <tbody>
                         @forelse ($rows as $event)
-                            <tr>
+                            <tr @class(['row-unread' => $event->isUnread()])>
+                                <td>{{ $rows->firstItem() + $loop->index }}</td>
                                 <td>
                                     {{ $event->event_id }}
                                     <div class="text-xs text-wd-muted">{{ $event->device->code }} · {{ $event->device->product->name ?? 'Belum dipetakan' }} · {{ $event->device->slot_label ?: 'tanpa slot' }}</div>
@@ -61,11 +64,12 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="6">Tidak ada peristiwa pada kelompok ini.</td></tr>
+                            <tr><td colspan="7">Tidak ada peristiwa pada kelompok ini.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
+            <x-pager :rows="$rows" />
         </section>
     @endforeach
 
@@ -74,11 +78,12 @@
         <div class="table-wrap">
             <table class="table">
                 <thead>
-                    <tr><th>ID transaksi</th><th>SKU</th><th>Jumlah</th><th>Waktu (WIB)</th><th>Sumber</th></tr>
+                    <tr><th>No</th><th>ID transaksi</th><th>SKU</th><th>Jumlah</th><th>Waktu (WIB)</th><th>Sumber</th></tr>
                 </thead>
                 <tbody>
                     @forelse ($transactions as $transaction)
                         <tr>
+                            <td>{{ $transactions->firstItem() + $loop->index }}</td>
                             <td>{{ $transaction->external_id }}</td>
                             <td>{{ $transaction->product->sku }}</td>
                             <td>{{ $transaction->quantity }}</td>
@@ -86,10 +91,11 @@
                             <td>{{ $transaction->sourceLabel() }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="5">Semua transaksi yang tampil sudah terhubung, atau belum ada transaksi.</td></tr>
+                        <tr><td colspan="6">Semua transaksi yang tampil sudah terhubung, atau belum ada transaksi.</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+        <x-pager :rows="$transactions" />
     </section>
 </div>

@@ -19,12 +19,17 @@
                         @if ($item['url'])
                             <a
                                 href="{{ $item['url'] }}"
-                                @click="typeof sidebarOpen !== 'undefined' && (sidebarOpen = false)"
-                                class="flex items-center rounded-lg px-3 py-2 text-sm transition
+                                @click="$dispatch('close-sidebar')"
+                                class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition
                                     {{ $item['active']
                                         ? 'bg-wd-bg font-medium text-wd-accent'
                                         : 'text-wd-ink hover:bg-wd-bg hover:text-wd-accent' }}"
-                            >{{ $item['label'] }}</a>
+                            >
+                                <span>{{ $item['label'] }}</span>
+                                @if (($item['alert'] ?? 0) > 0)
+                                    <span class="nav-alert" aria-label="{{ $item['alert'] }} belum diperiksa">{{ $item['alert'] }}</span>
+                                @endif
+                            </a>
                         @endif
                     @endforeach
                 </div>

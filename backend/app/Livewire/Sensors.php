@@ -4,29 +4,42 @@ namespace App\Livewire;
 
 use App\Models\Device;
 use App\Models\WeightReading;
+use App\Services\AnomalySync;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
+use App\Livewire\Concerns\RefreshesWithDashboard;
+use App\Livewire\Concerns\WithPageSize;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 #[Layout('layouts.app', ['title' => 'Monitoring sensor'])]
 class Sensors extends Component
 {
+    use RefreshesWithDashboard;
+    use WithPageSize;
+    use WithPagination;
     #[Url(as: 'perangkat')]
     public string $code = '';
 
-    public function mount(): void
+    public function mount(AnomalySync $anomalies): void
     {
+        $anomalies->sync();
         if ($this->code === '') {
             $this->code = (string) Device::query()->orderBy('code')->value('code');
         }
     }
 
+    protected function pageNames(): array
+    {
+        return ['stock', 'readings'];
+    }
+
     public function render(): View
     {
-        $devices = Device::query()->with('product')->orderBy('code')->get();
-        $device = $devices->firstWhere('code', $this->code) ?? $devices->first();
+        $choices = Device::query()->orderBy('code')->get();
+        $device = $choices->firstWhere('code', $this->code) ?? $choices->first();
         $latest = $device === null
             ? collect()
             : $device->readings()->orderByDesc('recorded_at')->orderByDesc('id')->limit(40)->get();
@@ -36,9 +49,12 @@ class Sensors extends Component
         ])->values();
 
         return view('livewire.sensors', [
-            'devices' => $devices,
+            'devices' => Device::query()->with('product')->orderBy('code')->paginate($this->pageSize(), ['*'], 'stock'),
+            'choices' => $choices,
             'device' => $device,
-            'readings' => $latest,
+            'readings' => $device === null
+                ? new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10, 1, ['pageName' => 'readings'])
+                : $device->readings()->orderByDesc('recorded_at')->orderByDesc('id')->paginate($this->pageSize(), ['*'], 'readings'),
             'chart' => $this->chart($ascending, $device),
         ]);
     }

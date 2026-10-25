@@ -19,13 +19,13 @@
     @endif
     @livewireStyles
 </head>
-<body class="min-h-screen bg-wd-bg text-wd-ink">
+<body class="h-dvh overflow-hidden bg-wd-bg text-wd-ink">
 @php
-    $navGroups = $navGroups ?? [];
     $user = auth()->user();
+    $user?->loadMissing('roles');
 @endphp
 <div
-    class="min-h-screen"
+    class="flex h-dvh flex-col"
     x-data="{
         sidebarOpen: false,
         dark: document.documentElement.classList.contains('dark'),
@@ -36,8 +36,9 @@
         }
     }"
     @keydown.escape.window="sidebarOpen = false"
+    @close-sidebar.window="sidebarOpen = false"
 >
-    <header class="sticky top-0 z-40 border-b border-wd-border bg-wd-card">
+    <header class="z-40 shrink-0 border-b border-wd-border bg-wd-card">
         <div class="flex h-14 items-center justify-between gap-3 px-4 sm:px-6">
             <div class="flex min-w-0 items-center gap-3">
                 <button
@@ -111,7 +112,7 @@
         </div>
     </header>
 
-    <div class="relative flex min-h-[calc(100vh-3.5rem)]">
+    <div class="relative flex min-h-0 flex-1 overflow-hidden">
         <div
             x-show="sidebarOpen"
             class="fixed inset-0 z-40 bg-black/30 lg:hidden"
@@ -120,7 +121,7 @@
         ></div>
 
         <aside
-            class="fixed inset-y-0 left-0 z-50 flex w-60 -translate-x-full flex-col border-r border-wd-border bg-wd-card transition-transform duration-200 lg:static lg:translate-x-0 lg:self-stretch"
+            class="fixed inset-y-0 left-0 z-50 flex h-full w-60 -translate-x-full flex-col border-r border-wd-border bg-wd-card transition-transform duration-200 lg:static lg:h-full lg:shrink-0 lg:translate-x-0"
             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
             aria-label="Navigasi utama"
         >
@@ -129,12 +130,12 @@
                 <button type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-wd-border hover:bg-wd-sidebar" @click="sidebarOpen = false" aria-label="Tutup menu">✕</button>
             </div>
             <div class="flex-1 overflow-y-auto px-3 py-4">
-                @include('layouts.partials.sidebar')
+                <livewire:sidebar />
             </div>
         </aside>
 
-        <div class="flex min-w-0 flex-1 flex-col">
-            <main class="flex-1 px-4 py-6 sm:px-6" id="main">
+        <div class="min-h-0 min-w-0 flex-1 overflow-y-auto">
+            <main class="px-4 py-6 sm:px-6" id="main">
                 @isset($slot)
                     {{ $slot }}
                 @else

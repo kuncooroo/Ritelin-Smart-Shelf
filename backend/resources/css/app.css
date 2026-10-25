@@ -137,6 +137,26 @@
         @apply border-b-0;
     }
 
+    .row-unread td {
+        @apply bg-red-50;
+    }
+
+    .dark .row-unread td {
+        background-color: #3a2222;
+    }
+
+    .page-link {
+        @apply inline-flex h-9 min-w-9 items-center justify-center rounded-lg border border-wd-border bg-wd-card px-2 text-sm text-wd-ink transition hover:bg-wd-sidebar;
+    }
+
+    .page-current {
+        @apply border-wd-accent bg-wd-accent text-white hover:bg-wd-accent;
+    }
+
+    .nav-alert {
+        @apply ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white;
+    }
+
     .code-box {
         @apply overflow-x-auto whitespace-pre-wrap break-all rounded-lg border border-wd-border bg-wd-sidebar p-3 font-mono text-xs text-wd-ink;
     }
@@ -155,6 +175,10 @@
 
     .modal-backdrop {
         @apply fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center;
+    }
+
+    .modal-backdrop-front {
+        @apply fixed inset-0 z-[80] flex items-end justify-center bg-black/40 p-4 sm:items-center;
     }
 
     .modal-panel {

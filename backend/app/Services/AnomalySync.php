@@ -15,8 +15,11 @@ use Illuminate\Support\Arr;
 
 class AnomalySync
 {
+    public function __construct(private readonly StockLedger $stock) {}
+
     public function sync(): void
     {
+        $this->stock->expireAll();
         $this->syncWeight();
         $this->syncOffline();
         $this->syncSensors();

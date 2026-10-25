@@ -15,67 +15,42 @@
         <div class="stat-card"><div class="stat-label">Sensor</div><div class="stat-value text-base">{{ $device->sensor_status?->label() ?? 'Belum ditentukan' }}</div></div>
     </div>
 
-    <div class="grid gap-4 lg:grid-cols-2">
-        <section class="card space-y-3">
-            <h2 class="text-base font-semibold">Slot dan kalibrasi</h2>
-            <p class="text-sm text-wd-muted">Token unik tersimpan di server dan tidak ditampilkan ulang. Ambang kosong memakai ambang bawaan pengaturan.</p>
-            <label class="field-label" for="storeLocation">Lokasi toko</label>
-            <input id="storeLocation" class="field-input" wire:model="storeLocation" @disabled(! auth()->user()->hasPermission(\App\Enums\PermissionName::DevicesManage))>
-            <label class="field-label" for="slotLabel">Slot rak</label>
-            <input id="slotLabel" class="field-input" wire:model="slotLabel" @disabled(! auth()->user()->hasPermission(\App\Enums\PermissionName::DevicesManage))>
-            <label class="field-label" for="baseline">Berat dasar (gram)</label>
-            <input id="baseline" class="field-input" wire:model="baseline" @disabled(! auth()->user()->hasPermission(\App\Enums\PermissionName::DevicesManage))>
-            @error('baseline') <div class="alert-error rounded-lg px-3 py-2">{{ $message }}</div> @enderror
-            <label class="field-label" for="threshold">Ambang perubahan berat (gram)</label>
-            <input id="threshold" class="field-input" wire:model="threshold" placeholder="Kosong = ambang bawaan" @disabled(! auth()->user()->hasPermission(\App\Enums\PermissionName::DevicesManage))>
-            <label class="field-label" for="shelfStatus">Status rak</label>
-            <select id="shelfStatus" class="field-select" wire:model="shelfStatus" @disabled(! auth()->user()->hasPermission(\App\Enums\PermissionName::DevicesManage))>
-                @foreach ($shelfStatuses as $status)
-                    <option value="{{ $status->value }}">{{ $status->label() }}</option>
-                @endforeach
-            </select>
-            <label class="field-label" for="sensorStatus">Status sensor</label>
-            <select id="sensorStatus" class="field-select" wire:model="sensorStatus" @disabled(! auth()->user()->hasPermission(\App\Enums\PermissionName::DevicesManage))>
-                @foreach ($sensorStatuses as $status)
-                    <option value="{{ $status->value }}">{{ $status->label() }}</option>
-                @endforeach
-            </select>
-            <p class="text-sm text-wd-muted">Kalibrasi terakhir: {{ $device->last_calibrated_at?->timezone('Asia/Jakarta')->format('d-m-Y H:i') ?? 'Belum ada' }}</p>
-            @if (auth()->user()->hasPermission(\App\Enums\PermissionName::DevicesManage))
-                <div class="row-actions">
-                    <button class="icon-btn" type="button" wire:click="save" title="Simpan" aria-label="Simpan">
-                        <x-icon name="check" />
-                    </button>
-                    <button class="icon-btn" type="button" wire:click="calibrate" title="Catat kalibrasi" aria-label="Catat kalibrasi">
-                        <x-icon name="refresh" />
-                    </button>
-                    <button class="icon-btn" type="button" wire:click="toggleActive" title="{{ $device->is_active ? 'Nonaktifkan' : 'Aktifkan' }}" aria-label="{{ $device->is_active ? 'Nonaktifkan' : 'Aktifkan' }}">
-                        <x-icon name="power" />
-                    </button>
-                </div>
-            @endif
-        </section>
-        <section class="card">
-            <h2 class="mb-3 text-base font-semibold">Riwayat aktivitas</h2>
-            <div class="table-wrap">
-                <table class="table">
-                    <thead>
-                        <tr><th>Waktu (WIB)</th><th>ID peristiwa</th><th>Aktivitas</th><th>Berat</th></tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($events as $event)
-                            <tr>
-                                <td>{{ $event->occurred_at->timezone('Asia/Jakarta')->format('d-m-Y H:i:s') }}</td>
-                                <td>{{ $event->event_id }}</td>
-                                <td>{{ $event->activityLabel() }}</td>
-                                <td>{{ $event->weight_grams }} g</td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="4">Belum ada aktivitas pada perangkat ini.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    </div>
+    <section class="card">
+        <h2 class="mb-3 text-base font-semibold">Spesifikasi</h2>
+        <dl class="grid gap-3 text-sm sm:grid-cols-2">
+            <div><dt class="text-wd-muted">Slot</dt><dd>{{ $device->slot_label ?: 'Belum diisi' }}</dd></div>
+            <div><dt class="text-wd-muted">Produk</dt><dd>{{ $device->product->name ?? 'Belum dipetakan' }}</dd></div>
+            <div><dt class="text-wd-muted">Lokasi</dt><dd>{{ $device->store_location ?: 'Belum diisi' }}</dd></div>
+            <div><dt class="text-wd-muted">Berat terakhir</dt><dd>{{ $device->last_weight_grams === null ? 'Belum ada' : $device->last_weight_grams.' g' }}</dd></div>
+            <div><dt class="text-wd-muted">Stok di rak</dt><dd>{{ $device->physical_stock === null ? 'Belum dihitung' : $device->physical_stock.' unit' }}</dd></div>
+            <div><dt class="text-wd-muted">Stok di kasir</dt><dd>{{ $device->pos_stock === null ? 'Belum dihitung' : $device->pos_stock.' unit' }}</dd></div>
+            <div><dt class="text-wd-muted">Status stok</dt><dd>{{ $device->stockStatusLabel() }}</dd></div>
+            <div><dt class="text-wd-muted">Timbangan</dt><dd>{{ $device->tare_requested ? 'Tare sedang berjalan' : ($device->last_calibrated_at ? 'Sudah dinolkan' : 'Belum dinolkan') }}</dd></div>
+        </dl>
+    </section>
+
+    <section class="card">
+        <h2 class="mb-3 text-base font-semibold">Riwayat aktivitas</h2>
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr><th>No</th><th>Waktu (WIB)</th><th>ID peristiwa</th><th>Aktivitas</th><th>Berat</th></tr>
+                </thead>
+                <tbody>
+                    @forelse ($events as $event)
+                        <tr>
+                            <td>{{ $events->firstItem() + $loop->index }}</td>
+                            <td>{{ $event->occurred_at->timezone('Asia/Jakarta')->format('d-m-Y H:i:s') }}</td>
+                            <td>{{ $event->event_id }}</td>
+                            <td>{{ $event->activityLabel() }}</td>
+                            <td>{{ $event->weight_grams }} g</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="5">Belum ada aktivitas pada perangkat ini.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        <x-pager :rows="$events" />
+    </section>
 </div>

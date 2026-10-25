@@ -8,6 +8,8 @@ return [
 
     'match_lead_minutes' => (int) env('RITELIN_MATCH_LEAD_MINUTES', 2),
 
+    'stock_window_minutes' => (int) env('RITELIN_STOCK_WINDOW_MINUTES', 2),
+
     'threshold_grams' => (float) env('RITELIN_THRESHOLD_GRAMS', 15),
 
     'verify_ms' => (int) env('RITELIN_VERIFY_MS', 1500),

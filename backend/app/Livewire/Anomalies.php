@@ -7,6 +7,9 @@ use App\Enums\AnomalyPriority;
 use App\Enums\AnomalyStatus;
 use App\Enums\PermissionName;
 use App\Livewire\Concerns\AuthorizesShelf;
+use App\Livewire\Concerns\ConfirmsActions;
+use App\Livewire\Concerns\RefreshesWithDashboard;
+use App\Livewire\Concerns\WithPageSize;
 use App\Models\Anomaly;
 use App\Services\AnomalySync;
 use App\Services\AuditLogger;
@@ -15,11 +18,16 @@ use Illuminate\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 #[Layout('layouts.app', ['title' => 'Anomali'])]
 class Anomalies extends Component
 {
     use AuthorizesShelf;
+    use ConfirmsActions;
+    use RefreshesWithDashboard;
+    use WithPageSize;
+    use WithPagination;
 
     #[Url]
     public string $status = '';
@@ -48,6 +56,10 @@ class Anomalies extends Component
     public function inspect(int $anomalyId): void
     {
         $anomaly = Anomaly::query()->findOrFail($anomalyId);
+        if ($anomaly->checked_at === null) {
+            $anomaly->checked_at = now();
+            $anomaly->save();
+        }
         $this->selectedId = $anomaly->id;
         $this->followStatus = $anomaly->status->value;
         $this->note = (string) $anomaly->note;
@@ -85,6 +97,14 @@ class Anomalies extends Component
         $this->selectedId = null;
     }
 
+    /**
+     * @return list<string>
+     */
+    protected function confirmableActions(): array
+    {
+        return ['saveFollowUp'];
+    }
+
     public function render(): View
     {
         $query = Anomaly::query()->with(['device.product', 'event']);
@@ -102,8 +122,7 @@ class Anomalies extends Component
         $anomalies = $query
             ->orderByRaw("case priority when 'high' then 0 when 'medium' then 1 else 2 end")
             ->orderByDesc('id')
-            ->limit(100)
-            ->get();
+            ->paginate($this->pageSize());
 
         return view('livewire.anomalies', [
             'anomalies' => $anomalies,
