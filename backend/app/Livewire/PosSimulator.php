@@ -92,7 +92,7 @@ class PosSimulator extends Component
         return view('livewire.pos-simulator', [
             'products' => Product::query()->where('is_active', true)->orderBy('name')->get(),
             'transactions' => $transactions->orderByDesc('occurred_at')->paginate($this->pageSize()),
-            'posReady' => config('ritelin.pos_token') !== null && config('ritelin.pos_token') !== '',
+            'posReady' => config('rakku.pos_token') !== null && config('rakku.pos_token') !== '',
         ]);
     }
 }

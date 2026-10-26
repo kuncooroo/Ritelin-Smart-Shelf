@@ -11,10 +11,15 @@ use App\Models\AppSetting;
 use App\Models\Device;
 use App\Models\ProcessingFailure;
 use App\Models\ShelfEvent;
+use BackedEnum;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 
 class AnomalySync
 {
+    /** @var Collection<string, Anomaly>|null */
+    private ?Collection $indexed = null;
+
     public function __construct(private readonly StockLedger $stock) {}
 
     public function sync(): void
@@ -152,17 +157,52 @@ class AnomalySync
      */
     private function ensure(string $key, array $attributes): void
     {
-        $existing = Anomaly::query()->where('dedupe_key', $key)->first();
+        $existing = $this->index()->get($key);
 
         if ($existing === null) {
-            Anomaly::query()->create($attributes + [
+            $created = Anomaly::query()->create($attributes + [
                 'dedupe_key' => $key,
                 'status' => AnomalyStatus::New,
             ]);
+            $this->index()->put($key, $created);
 
             return;
         }
 
-        $existing->fill(Arr::except($attributes, ['status', 'note', 'ignore_reason']))->save();
+        $changes = Arr::except($attributes, ['status', 'note', 'ignore_reason']);
+        if ($this->unchanged($existing, $changes)) {
+            return;
+        }
+
+        $existing->fill($changes)->save();
+    }
+
+    /**
+     * @return Collection<string, Anomaly>
+     */
+    private function index(): Collection
+    {
+        return $this->indexed ??= Anomaly::query()->get()->keyBy('dedupe_key');
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function unchanged(Anomaly $existing, array $attributes): bool
+    {
+        foreach ($attributes as $key => $value) {
+            $current = $existing->getAttribute($key);
+            if ($current instanceof BackedEnum) {
+                $current = $current->value;
+            }
+            if ($value instanceof BackedEnum) {
+                $value = $value->value;
+            }
+            if ($current != $value) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

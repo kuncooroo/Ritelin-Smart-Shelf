@@ -28,16 +28,16 @@ void copyValue(BLECharacteristic* characteristic, char* dest, size_t size) {
 }
 
 #if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
-#define RITELIN_ON_WRITE void onWrite(BLECharacteristic* characteristic, esp_ble_gatts_cb_param_t* param) override
+#define RAKKU_ON_WRITE void onWrite(BLECharacteristic* characteristic, esp_ble_gatts_cb_param_t* param) override
 #else
-#define RITELIN_ON_WRITE void onWrite(BLECharacteristic* characteristic) override
+#define RAKKU_ON_WRITE void onWrite(BLECharacteristic* characteristic) override
 #endif
 
 class TextCallbacks : public BLECharacteristicCallbacks {
  public:
   explicit TextCallbacks(char* dest, size_t size) : dest_(dest), size_(size) {}
 
-  RITELIN_ON_WRITE { copyValue(characteristic, dest_, size_); }
+  RAKKU_ON_WRITE { copyValue(characteristic, dest_, size_); }
 
  private:
   char* dest_;
@@ -45,7 +45,7 @@ class TextCallbacks : public BLECharacteristicCallbacks {
 };
 
 class CommitCallbacks : public BLECharacteristicCallbacks {
-  RITELIN_ON_WRITE {
+  RAKKU_ON_WRITE {
     String value = characteristic->getValue();
     if (value == "1") {
       gCommit = true;
@@ -70,7 +70,7 @@ void bleProvisionStart(const char* deviceName) {
   gCommit = false;
 
   char advertised[32];
-  snprintf(advertised, sizeof(advertised), "RITELIN-%s", deviceName);
+  snprintf(advertised, sizeof(advertised), "RAKKU-%s", deviceName);
   BLEDevice::init(advertised);
   BLEServer* server = BLEDevice::createServer();
   BLEService* service = server->createService(kServiceUuid);

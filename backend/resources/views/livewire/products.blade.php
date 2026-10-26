@@ -42,7 +42,7 @@
                             <td>
                                 <div class="flex items-center gap-3">
                                     @if ($product->imageUrl())
-                                        <img src="{{ $product->imageUrl() }}" alt="{{ $product->name }}" class="h-10 w-10 rounded object-cover">
+                                        <img src="{{ $product->imageUrl() }}" alt="{{ $product->name }}" width="40" height="40" loading="lazy" decoding="async" class="h-10 w-10 rounded object-cover">
                                     @endif
                                     <div>
                                         {{ $product->name }}
@@ -98,7 +98,7 @@
         <input id="product-image" class="field-input" type="file" wire:model="image" accept="image/*">
         @error('image') <div class="alert-error mt-2 rounded-lg px-3 py-2">{{ $message }}</div> @enderror
         @if ($editing?->imageUrl())
-            <img src="{{ $editing->imageUrl() }}" alt="{{ $editing->name }}" class="mt-3 h-16 w-16 rounded object-cover">
+            <img src="{{ $editing->imageUrl() }}" alt="{{ $editing->name }}" width="64" height="64" decoding="async" class="mt-3 h-16 w-16 rounded object-cover">
         @endif
         <label class="mt-3 flex items-center gap-2 text-sm text-wd-ink">
             <input type="checkbox" wire:model="isActive"> Produk aktif

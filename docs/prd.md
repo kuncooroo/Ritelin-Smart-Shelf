@@ -1,6 +1,6 @@
 # PRODUCT REQUIREMENTS DOCUMENT (PRD)
 
-## RITELIN Smart Shelf
+## Rakku
 
 * **Versi:** 1.0
 
@@ -12,11 +12,11 @@
 
 ## 1. Ringkasan Produk
 
-RITELIN Smart Shelf merupakan perangkat pemantauan barang pada rak toko berbasis Internet of Things (IoT). Perangkat menggunakan load cell dan modul HX711 untuk mendeteksi perubahan berat barang, kemudian memproses perubahan tersebut menggunakan mikrokontroler ESP32.
+Rakku merupakan perangkat pemantauan barang pada rak toko berbasis Internet of Things (IoT). Perangkat menggunakan load cell dan modul HX711 untuk mendeteksi perubahan berat barang, kemudian memproses perubahan tersebut menggunakan mikrokontroler ESP32.
 
 Sistem dirancang untuk memantau produk tertentu yang bernilai tinggi atau berisiko mengalami selisih stok, seperti parfum premium, kosmetik, skincare, dan produk elektronik berukuran kecil.
 
-Pada tahap awal, perangkat bekerja secara mandiri untuk membaca berat, mendeteksi perubahan, serta menghasilkan event ketika barang kemungkinan diambil atau dikembalikan. Pada tahap berikutnya, perangkat akan terhubung ke backend RITELIN dan sistem POS untuk membantu mendeteksi ketidaksesuaian antara aktivitas fisik pada rak dan transaksi kasir.
+Pada tahap awal, perangkat bekerja secara mandiri untuk membaca berat, mendeteksi perubahan, serta menghasilkan event ketika barang kemungkinan diambil atau dikembalikan. Pada tahap berikutnya, perangkat akan terhubung ke backend Rakku dan sistem POS untuk membantu mendeteksi ketidaksesuaian antara aktivitas fisik pada rak dan transaksi kasir.
 
 ### 1.1 Visi produk
 
@@ -50,7 +50,7 @@ Beberapa permasalahan yang ingin ditangani:
 
 5. Sistem POS biasa tidak selalu mengetahui aktivitas pengambilan dan pengembalian barang sebelum transaksi terjadi.
 
-RITELIN Smart Shelf bertujuan memberikan informasi tambahan dari sensor fisik agar aktivitas pada rak dapat dianalisis bersama catatan transaksi.
+Rakku bertujuan memberikan informasi tambahan dari sensor fisik agar aktivitas pada rak dapat dianalisis bersama catatan transaksi.
 
 > **Batasan penting:** Perubahan berat bukan bukti bahwa barang telah terjual atau dicuri. Sistem hanya menghasilkan indikasi aktivitas fisik yang perlu dikonfirmasi dengan data lain.
 
@@ -475,7 +475,7 @@ Prototype Smart Shelf dianggap siap masuk ke tahap integrasi backend apabila:
 
 ## 18. Kesimpulan
 
-RITELIN Smart Shelf dikembangkan secara bertahap, dimulai dari pembuktian bahwa load cell dan ESP32 mampu mendeteksi perubahan kondisi barang secara andal.
+Rakku dikembangkan secara bertahap, dimulai dari pembuktian bahwa load cell dan ESP32 mampu mendeteksi perubahan kondisi barang secara andal.
 
 Fokus awal bukan membuat sistem retail lengkap, melainkan membangun perangkat IoT yang stabil, terukur, dan siap diintegrasikan. Setelah perangkat berhasil, sistem dapat diperluas menjadi platform monitoring inventori yang menghubungkan aktivitas fisik pada rak dengan transaksi kasir.
 

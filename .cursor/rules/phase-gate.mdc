@@ -1,5 +1,5 @@
 ---
-description: Gerbang tahap RITELIN Smart Shelf. Tolak pekerjaan di luar tahap aktif.
+description: Gerbang tahap Rakku. Tolak pekerjaan di luar tahap aktif.
 alwaysApply: true
 ---
 

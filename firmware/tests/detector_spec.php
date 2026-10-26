@@ -26,8 +26,6 @@ final class ShelfDetectorSpec
 
     private float $baseline = 0;
 
-    private float $returnTarget = 0;
-
     private int $changeStartedMs = 0;
 
     private string $state = 'NORMAL';
@@ -36,6 +34,17 @@ final class ShelfDetectorSpec
     {
         $this->threshold = $threshold;
         $this->verifyMs = $verifyMs;
+    }
+
+    public function resetBaseline(): void
+    {
+        $this->baselineReady = false;
+        $this->baseline = 0;
+        $this->filled = false;
+        $this->index = 0;
+        $this->changeStartedMs = 0;
+        $this->state = 'NORMAL';
+        $this->window = [];
     }
 
     /** @return array{state: string, event: string, weight: float, baseline: float} */
@@ -67,28 +76,6 @@ final class ShelfDetectorSpec
             case 'VERIFYING':
                 $event = $this->evaluateVerifying($nowMs, $weight);
                 break;
-            case 'ITEM_REMOVED':
-                if ($this->nearReturn($weight)) {
-                    $this->state = 'VERIFYING_RETURN';
-                    $this->changeStartedMs = $nowMs;
-                }
-                break;
-            case 'VERIFYING_RETURN':
-                if (! $this->nearReturn($weight)) {
-                    $this->state = 'ITEM_REMOVED';
-                } elseif (($nowMs - $this->changeStartedMs) >= $this->verifyMs) {
-                    $this->baseline = $weight;
-                    $this->state = 'NORMAL';
-                    $event = 'ITEM_RETURNED';
-
-                    return [
-                        'state' => 'ITEM_RETURNED',
-                        'event' => $event,
-                        'weight' => $weight,
-                        'baseline' => $this->baseline,
-                    ];
-                }
-                break;
         }
 
         return $this->result($weight, $event);
@@ -104,17 +91,11 @@ final class ShelfDetectorSpec
         if (($nowMs - $this->changeStartedMs) < $this->verifyMs) {
             return '';
         }
-        if ($weight < $this->baseline) {
-            $this->returnTarget = $this->baseline;
-            $this->baseline = $weight;
-            $this->state = 'ITEM_REMOVED';
-
-            return 'ITEM_REMOVED';
-        }
+        $removed = $weight < $this->baseline;
         $this->baseline = $weight;
         $this->state = 'NORMAL';
 
-        return '';
+        return $removed ? 'ITEM_REMOVED' : 'ITEM_ADDED';
     }
 
     private function push(float $sample): void
@@ -140,12 +121,7 @@ final class ShelfDetectorSpec
 
     private function departed(float $weight): bool
     {
-        return abs($weight - $this->baseline) >= $this->threshold;
-    }
-
-    private function nearReturn(float $weight): bool
-    {
-        return abs($weight - $this->returnTarget) < $this->threshold;
+        return abs($weight - $this->baseline) > $this->threshold;
     }
 
     /** @return array{state: string, event: string, weight: float, baseline: float} */
@@ -246,17 +222,17 @@ $removal->update(200, 0.0);
 $removal->update(300, 0.0);
 $removal->update(400, 0.0);
 $removed = $removal->update(1300, 0.0);
-check($removed['event'] === 'ITEM_REMOVED' && $removed['state'] === 'ITEM_REMOVED', 'pengambilan terverifikasi');
+check($removed['event'] === 'ITEM_REMOVED' && $removed['state'] === 'NORMAL', 'pengambilan terverifikasi lalu kembali normal');
 $again = $removal->update(1400, 0.0);
 check($again['event'] === '', 'pengambilan tidak diulang saat berat tetap');
 
 $removal->update(1500, 100.0);
 $removal->update(1600, 100.0);
 $startedReturn = $removal->update(1700, 100.0);
-check($startedReturn['state'] === 'VERIFYING_RETURN' && $startedReturn['event'] === '', 'pengembalian mulai diverifikasi');
+check($startedReturn['state'] === 'CHANGE_DETECTED' && $startedReturn['event'] === '', 'penambahan mulai diverifikasi');
 $removal->update(1800, 100.0);
 $returned = $removal->update(2700, 100.0);
-check($returned['event'] === 'ITEM_RETURNED' && $returned['state'] === 'ITEM_RETURNED', 'pengembalian terverifikasi');
+check($returned['event'] === 'ITEM_ADDED' && $returned['state'] === 'NORMAL', 'penambahan terverifikasi lalu kembali normal');
 
 $place = new ShelfDetectorSpec(15.0, 1000);
 $place->update(0, 0.0);
@@ -265,7 +241,31 @@ $place->update(200, 100.0);
 $place->update(300, 100.0);
 $place->update(400, 100.0);
 $placed = $place->update(1300, 100.0);
-check($placed['event'] === '' && $placed['state'] === 'NORMAL', 'penambahan beban memperbarui baseline tanpa event');
+check($placed['event'] === 'ITEM_ADDED' && $placed['state'] === 'NORMAL', 'menaruh barang tercatat lalu status normal');
+
+$stock = new ShelfDetectorSpec(15.0, 1000);
+$stock->update(0, 100.0);
+foreach ([200.0, 200.0, 200.0, 200.0] as $index => $weight) {
+    $stock->update(100 + ($index * 100), $weight);
+}
+$added = $stock->update(1300, 200.0);
+check($added['event'] === 'ITEM_ADDED' && $added['state'] === 'NORMAL' && abs($added['baseline'] - 200.0) < 0.1, 'barang kedua menambah stok');
+foreach ([100.0, 100.0, 100.0, 100.0] as $index => $weight) {
+    $stock->update(1400 + ($index * 100), $weight);
+}
+$oneLeft = $stock->update(2600, 100.0);
+check($oneLeft['event'] === 'ITEM_REMOVED' && $oneLeft['state'] === 'NORMAL' && abs($oneLeft['baseline'] - 100.0) < 0.1, 'sisa satu barang tetap normal');
+foreach ([0.0, 0.0, 0.0, 0.0] as $index => $weight) {
+    $stock->update(2700 + ($index * 100), $weight);
+}
+$empty = $stock->update(3900, 0.0);
+check($empty['event'] === 'ITEM_REMOVED' && $empty['state'] === 'NORMAL', 'pengambilan berikutnya tetap tercatat');
+
+$tare = new ShelfDetectorSpec(15.0, 1000);
+$tare->update(0, 180.0);
+$tare->resetBaseline();
+$afterTare = $tare->update(100, 0.0);
+check($afterTare['event'] === '' && $afterTare['state'] === 'NORMAL' && abs($afterTare['baseline']) < 0.1, 'tare mengosongkan dasar tanpa event');
 
 $queue = new EventQueueSpec();
 check($queue->enqueue('evt-000001') === true, 'event masuk antrean');

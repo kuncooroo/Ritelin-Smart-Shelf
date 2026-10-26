@@ -170,11 +170,17 @@ void printStatusCommand() {
   Serial.println("token perangkat tidak ditampilkan");
 }
 
+void performTare() {
+  scale.tare(10);
+  prefs.putLong("offset", scale.get_offset());
+  detector.resetBaseline();
+  Serial.println("tare selesai, offset tersimpan");
+}
+
 void handleCommand(char* command) {
   if (strcmp(command, "tare") == 0) {
-    scale.tare(10);
-    prefs.putLong("offset", scale.get_offset());
-    Serial.println("tare selesai");
+    performTare();
+    reportTare();
     return;
   }
   if (strncmp(command, "calibrate ", 10) == 0) {
@@ -359,6 +365,22 @@ void uploadHead() {
                 event->attempts);
 }
 
+bool jsonBool(const char* json, const char* key) {
+  const char* found = strstr(json, key);
+  if (found == nullptr) {
+    return false;
+  }
+  found = strchr(found, ':');
+  if (found == nullptr) {
+    return false;
+  }
+  found++;
+  while (*found == ' ') {
+    found++;
+  }
+  return *found == 't' || *found == '1';
+}
+
 bool jsonFloat(const char* json, const char* key, float* out) {
   const char* found = strstr(json, key);
   if (found == nullptr) {
@@ -402,6 +424,7 @@ void pullConfig() {
   http.addHeader("Accept", "application/json");
   http.addHeader("Authorization", String("Bearer ") + activeToken);
   int code = http.GET();
+  bool tareRequested = false;
   if (code == 200) {
     String body = http.getString();
     float threshold = 0;
@@ -412,8 +435,47 @@ void pullConfig() {
     if (jsonFloat(body.c_str(), "verify_ms", &verify)) {
       detector.setVerifyMs((uint32_t) verify);
     }
+    tareRequested = jsonBool(body.c_str(), "\"tare\"");
   }
   http.end();
+  if (tareRequested) {
+    performTare();
+    reportTare();
+  }
+}
+
+void reportTare() {
+  if (!tokenReady() || WiFi.status() != WL_CONNECTED) {
+    Serial.println("tare tersimpan di perangkat, laporan ke server menunggu Wi-Fi");
+    return;
+  }
+  float grams = calibrated && scale.get_scale() != 0 ? scale.get_units(5) : 0;
+  char url[160];
+  snprintf(url, sizeof(url), "%s/api/tare", API_BASE_URL);
+  char body[96];
+  snprintf(body, sizeof(body), "{\"device_id\":\"%s\",\"weight_grams\":%.1f}", DEVICE_ID, grams);
+
+  HTTPClient http;
+  int code = -1;
+  if (strncmp(API_BASE_URL, "https://", 8) == 0) {
+    WiFiClientSecure secure;
+#if API_TLS_INSECURE
+    secure.setInsecure();
+#endif
+    if (!http.begin(secure, url)) {
+      return;
+    }
+    code = sendBody(http, body);
+    http.end();
+  } else {
+    WiFiClient plain;
+    if (!http.begin(plain, url)) {
+      return;
+    }
+    code = sendBody(http, body);
+    http.end();
+  }
+  Serial.printf("laporan tare kode=%d\n", code);
 }
 
 void powerSaveDelay() {
@@ -438,7 +500,7 @@ void setup() {
   loadIdentity();
   String storedQueue = prefs.getString("queue", "");
   queue.loadFromText(storedQueue.c_str());
-  Serial.printf("RITELIN Smart Shelf %s device_id=%s\n", DEVICE_FIRMWARE, DEVICE_ID);
+  Serial.printf("Rakku %s device_id=%s\n", DEVICE_FIRMWARE, DEVICE_ID);
   if (!calibrated) {
     Serial.println("Belum dikalibrasi. Kosongkan platform, kirim tare, letakkan beban, lalu calibrate <gram>.");
   }

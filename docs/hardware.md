@@ -1,4 +1,4 @@
-# Perangkat RITELIN Smart Shelf
+# Perangkat Rakku
 
 Firmware ada di `firmware/smart_shelf/`. Bahasa Arduino C/C++ untuk ESP32 DevKit. Catu daya prototype adalah USB 5 V. Load cell awal berkapasitas 5 kg.
 
@@ -51,20 +51,19 @@ Sebelum kalibrasi, firmware hanya mencetak raw dan status `BELUM_KALIBRASI`. Eve
 
 Dua cara memakai tare:
 
-- Tare saat platform kosong, lalu letakkan produk. Kenaikan berat yang stabil menjadi baseline tanpa event. Pengambilan setelah status `NORMAL` menghasilkan `ITEM_REMOVED`.
+- Tare saat platform kosong, lalu letakkan produk. Kenaikan berat yang stabil menghasilkan `ITEM_ADDED`, lalu status kembali `NORMAL`. Pengambilan setelah itu menghasilkan `ITEM_REMOVED`, lalu status kembali `NORMAL` pada berat yang tersisa.
 - Tare saat produk sudah berada di platform. Pengambilan terlihat sebagai berat negatif dan tetap bisa menghasilkan event.
 
 Tunggu status `NORMAL` sebelum uji ambil-kembali. Median lima sampel butuh beberapa pembacaan sebelum perubahan diakui, lalu jendela verifikasi bawaan 1500 ms.
 
 ## Deteksi
 
-State: `NORMAL` → `CHANGE_DETECTED` → `VERIFYING` → `ITEM_REMOVED`, lalu `VERIFYING_RETURN` → `ITEM_RETURNED`.
+State: `NORMAL` → `CHANGE_DETECTED` → `VERIFYING` → event, lalu kembali `NORMAL` dengan berat yang baru sebagai dasar.
 
 - Fluktuasi di bawah threshold 15 g tidak membuat event.
 - Sentuhan yang kembali sebelum jendela verifikasi selesai tidak menjadi event permanen.
-- Pengambilan yang tetap menghasilkan `ITEM_REMOVED` satu kali.
-- Berat yang kembali ke baseline sebelum pengambilan menghasilkan `ITEM_RETURNED`.
-- Menaruh beban baru saat `NORMAL` memperbarui baseline dan tidak membuat event removal.
+- Berat yang turun dan tetap menghasilkan `ITEM_REMOVED` satu kali, lalu dasar berpindah ke berat sisa. Pengambilan berikutnya bisa tercatat lagi.
+- Berat yang naik dan tetap menghasilkan `ITEM_ADDED` satu kali, lalu dasar berpindah ke berat baru.
 
 Baris Serial:
 
@@ -102,7 +101,7 @@ Di LAN pengembangan, `http://` diperbolehkan. Di jaringan publik gunakan `https:
 
 ## BLE, daya, dan casing
 
-Kirim `provision` di Serial untuk membuka BLE bernama `RITELIN-SHELF-001`. Tulis SSID, sandi, dan token pada karakteristik di `ble_provision.cpp`, lalu tulis `1` pada karakteristik commit. Perangkat menyimpan kredensial dan mulai ulang. Token yang dikosongkan tidak menghapus token lama.
+Kirim `provision` di Serial untuk membuka BLE bernama `RAKKU-SHELF-001`. Tulis SSID, sandi, dan token pada karakteristik di `ble_provision.cpp`, lalu tulis `1` pada karakteristik commit. Perangkat menyimpan kredensial dan mulai ulang. Token yang dikosongkan tidak menghapus token lama.
 
 `POWER_SAVE` bawaan adalah 0. Nilai 1 mengaktifkan modem sleep dan light sleep hanya saat status `NORMAL` dan antrean kosong. Konsumsi arus belum diukur, jadi operasi baterai belum boleh diklaim dan kotak baterai jangan dipasang sebagai sumber utama.
 

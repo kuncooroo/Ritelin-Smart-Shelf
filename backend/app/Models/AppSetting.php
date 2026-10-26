@@ -26,26 +26,26 @@ class AppSetting extends Model
 
     public static function offlineSeconds(): int
     {
-        return (int) static::getValue('offline_seconds', config('ritelin.online_seconds'));
+        return (int) static::getValue('offline_seconds', config('rakku.online_seconds'));
     }
 
     public static function thresholdGrams(): float
     {
-        return (float) static::getValue('threshold_grams', config('ritelin.threshold_grams'));
+        return (float) static::getValue('threshold_grams', config('rakku.threshold_grams'));
     }
 
     public static function matchLeadMinutes(): int
     {
-        return (int) static::getValue('match_lead_minutes', config('ritelin.match_lead_minutes'));
+        return (int) static::getValue('match_lead_minutes', config('rakku.match_lead_minutes'));
     }
 
     public static function matchWindowMinutes(): int
     {
-        return (int) static::getValue('match_window_minutes', config('ritelin.match_window_minutes'));
+        return (int) static::getValue('match_window_minutes', config('rakku.match_window_minutes'));
     }
 
     public static function stockWindowMinutes(): int
     {
-        return (int) static::getValue('stock_window_minutes', config('ritelin.stock_window_minutes'));
+        return (int) static::getValue('stock_window_minutes', config('rakku.stock_window_minutes'));
     }
 }

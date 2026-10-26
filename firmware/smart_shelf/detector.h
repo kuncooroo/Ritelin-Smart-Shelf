@@ -5,14 +5,13 @@
 #include <string.h>
 
 // Logika deteksi yang sama diuji di firmware/tests/detector_spec.php.
+// Perubahan stabil menurunkan berat menjadi ITEM_REMOVED, menaikkan berat menjadi ITEM_ADDED,
+// lalu status kembali NORMAL pada berat yang baru.
 
 enum ShelfState {
   SHELF_NORMAL = 0,
   SHELF_CHANGE_DETECTED,
-  SHELF_VERIFYING,
-  SHELF_ITEM_REMOVED,
-  SHELF_VERIFYING_RETURN,
-  SHELF_ITEM_RETURNED
+  SHELF_VERIFYING
 };
 
 struct SampleResult {
@@ -32,7 +31,6 @@ class ShelfDetector {
         filled_(false),
         baselineReady_(false),
         baseline_(0),
-        returnTarget_(0),
         changeStartedMs_(0),
         state_(SHELF_NORMAL) {
     memset(window_, 0, sizeof(window_));
@@ -56,6 +54,16 @@ class ShelfDetector {
   }
 
   ShelfState state() const { return state_; }
+
+  void resetBaseline() {
+    baselineReady_ = false;
+    baseline_ = 0;
+    filled_ = false;
+    index_ = 0;
+    changeStartedMs_ = 0;
+    state_ = SHELF_NORMAL;
+    memset(window_, 0, sizeof(window_));
+  }
 
   SampleResult update(uint32_t nowMs, float sample) {
     push(sample);
@@ -89,27 +97,6 @@ class ShelfDetector {
       case SHELF_VERIFYING:
         evaluateVerifying(nowMs, result);
         break;
-      case SHELF_ITEM_REMOVED:
-        if (nearReturnTarget(result.weightGrams)) {
-          state_ = SHELF_VERIFYING_RETURN;
-          changeStartedMs_ = nowMs;
-        }
-        break;
-      case SHELF_VERIFYING_RETURN:
-        if (!nearReturnTarget(result.weightGrams)) {
-          state_ = SHELF_ITEM_REMOVED;
-        } else if (elapsed(nowMs) >= verifyMs_) {
-          baseline_ = result.weightGrams;
-          state_ = SHELF_NORMAL;
-          result.state = SHELF_ITEM_RETURNED;
-          result.baselineGrams = baseline_;
-          emit(&result, "ITEM_RETURNED");
-          return result;
-        }
-        break;
-      case SHELF_ITEM_RETURNED:
-        state_ = SHELF_NORMAL;
-        break;
     }
 
     result.state = state_;
@@ -127,7 +114,6 @@ class ShelfDetector {
   bool filled_;
   bool baselineReady_;
   float baseline_;
-  float returnTarget_;
   uint32_t changeStartedMs_;
   ShelfState state_;
 
@@ -160,11 +146,7 @@ class ShelfDetector {
   }
 
   bool departedFromBaseline(float weight) const {
-    return fabsf(weight - baseline_) >= thresholdGrams_;
-  }
-
-  bool nearReturnTarget(float weight) const {
-    return fabsf(weight - returnTarget_) < thresholdGrams_;
+    return fabsf(weight - baseline_) > thresholdGrams_;
   }
 
   uint32_t elapsed(uint32_t nowMs) const { return nowMs - changeStartedMs_; }
@@ -177,15 +159,11 @@ class ShelfDetector {
     if (elapsed(nowMs) < verifyMs_) {
       return;
     }
-    if (result.weightGrams < baseline_) {
-      returnTarget_ = baseline_;
-      baseline_ = result.weightGrams;
-      state_ = SHELF_ITEM_REMOVED;
-      emit(&result, "ITEM_REMOVED");
-      return;
-    }
+    bool removed = result.weightGrams < baseline_;
     baseline_ = result.weightGrams;
     state_ = SHELF_NORMAL;
+    result.baselineGrams = baseline_;
+    emit(&result, removed ? "ITEM_REMOVED" : "ITEM_ADDED");
   }
 
   static void clearResult(SampleResult* result) {
@@ -206,12 +184,6 @@ inline const char* shelfStateName(ShelfState state) {
       return "CHANGE_DETECTED";
     case SHELF_VERIFYING:
       return "VERIFYING";
-    case SHELF_ITEM_REMOVED:
-      return "ITEM_REMOVED";
-    case SHELF_VERIFYING_RETURN:
-      return "VERIFYING_RETURN";
-    case SHELF_ITEM_RETURNED:
-      return "ITEM_RETURNED";
   }
   return "UNKNOWN";
 }

@@ -11,7 +11,7 @@ class AuthenticateDevice
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (config('ritelin.require_tls') && ! $request->secure()) {
+        if (config('rakku.require_tls') && ! $request->secure()) {
             return response()->json(['message' => 'HTTPS diperlukan.'], 400);
         }
 

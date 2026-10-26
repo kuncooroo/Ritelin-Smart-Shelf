@@ -42,7 +42,7 @@ class ConfigController extends Controller
         return response()->json([
             'device_id' => $device->code,
             'threshold_grams' => $device->fresh()->effectiveThreshold(),
-            'verify_ms' => (int) config('ritelin.verify_ms'),
+            'verify_ms' => (int) config('rakku.verify_ms'),
             'match_window_minutes' => AppSetting::matchWindowMinutes(),
             'stock_window_minutes' => AppSetting::stockWindowMinutes(),
             'tare' => (bool) $device->fresh()->tare_requested,

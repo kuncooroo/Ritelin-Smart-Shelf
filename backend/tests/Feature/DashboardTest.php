@@ -39,7 +39,7 @@ class DashboardTest extends TestCase
 
         $this->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('Halo, Admin Ritelin')
+            ->assertSee('Halo, Admin Rakku')
             ->assertSee('indikasi aktivitas rak');
 
         $this->get(route('dashboard.devices'))

@@ -6,15 +6,15 @@
 #define DEVICE_TOKEN "local-shelf-001-token"
 #define DEVICE_FIRMWARE "0.7.0"
 
-#define WIFI_SSID ""
-#define WIFI_PASSWORD ""
+#define WIFI_SSID "KOS LT2 PUSAT"
+#define WIFI_PASSWORD "kostlt2165"
 
 // Prototipe LAN boleh http. Jaringan publik wajib https:// dengan sertifikat valid.
-#define API_BASE_URL "http://127.0.0.1:8000"
+#define API_BASE_URL "http://192.168.1.5:8000"
 #define API_TLS_INSECURE 0
 
-#define HX711_DOUT_PIN 16
-#define HX711_SCK_PIN 4
+#define HX711_DOUT_PIN 4
+#define HX711_SCK_PIN 5
 
 #define DEFAULT_THRESHOLD_GRAMS 15.0f
 #define DEFAULT_VERIFY_MS 1500

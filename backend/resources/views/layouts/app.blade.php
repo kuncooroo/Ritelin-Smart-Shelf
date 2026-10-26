@@ -50,7 +50,7 @@
                     <span class="text-lg leading-none" aria-hidden="true">☰</span>
                 </button>
                 <a href="{{ route('dashboard') }}" class="truncate text-base font-semibold text-wd-accent sm:text-lg">
-                    {{ config('app.name') }}
+                <img src="{{ asset('images/logo.png') }}" alt="{{ config('app.name') }}" class="h-10 w-auto">
                 </a>
             </div>
 

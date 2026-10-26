@@ -1,4 +1,4 @@
-# Backend dan dashboard RITELIN
+# Backend dan dashboard Rakku
 
 Aplikasi ada di `backend/`. API memakai Laravel, data pengembangan memakai SQLite, dan MySQL disiapkan di `.env.example` untuk server. Dashboard admin memakai Laravel Livewire. Pilihan ini diambil di Tahap 5 karena API dan halaman admin bisa hidup dalam satu aplikasi.
 
@@ -12,19 +12,24 @@ copy .env.example .env
 php artisan key:generate
 php artisan migrate --seed
 php artisan serve
+php artisan reverb:start
 ```
+
+`php artisan serve` dan `php artisan reverb:start` berjalan di dua terminal. Perangkat tetap mengirim lewat HTTP. Reverb hanya memberi tahu browser admin bahwa ada data baru, lalu halaman Livewire memuat ulang isinya tanpa refresh manual.
 
 Buka `http://127.0.0.1:8000/login`.
 
+`php artisan migrate --seed` di mesin pengembangan menjalankan `MainSeeder` lalu `DemoSeeder`. Di production jalankan `php artisan db:seed --class=MainSeeder` sekali untuk peran dan akun superadmin. Jangan menjalankan `DemoSeeder` pada data toko yang sudah dipakai.
+
 Akun demo lokal, semuanya memakai kata sandi `password`:
 
-- `admin@ritelin.local` — admin retail, mengelola perangkat, produk, kasir, dan pengguna.
-- `petugas@ritelin.local` — memantau perangkat dan riwayat rak.
-- `pemilik@ritelin.local` — melihat kondisi rak dan indikasi selisih.
+- `admin@ritelin.local` — superadmin, peran tertinggi. Satu-satunya peran yang mengelola akun, plus seluruh pengelolaan rak.
+- `admin.toko@ritelin.local` — admin. Mengelola perangkat, produk, kasir, anomali, dan pengaturan. Tidak mengelola akun.
+- `petugas@ritelin.local`, `pemilik@ritelin.local`, `kasir.demo@ritelin.local`, dan `gudang@ritelin.local` — staf. Memantau perangkat, aktivitas, anomali, rekonsiliasi, dan laporan.
 
-Token perangkat demo `SHELF-001`: `local-shelf-001-token`. Token webhook kasir: `local-pos-webhook-token`. Ganti akun dan token sebelum dipakai di luar mesin pengembangan. Perangkat baru mendapat token acak sendiri dari halaman Perangkat.
+Token perangkat yang terpasang tetap `SHELF-001`: `local-shelf-001-token`. Seeder demo tidak mengubah nama, lokasi, slot, produk, token, atau riwayat `SHELF-001` yang sudah ada. `SHELF-010`, `SHELF-011`, dan `SHELF-012` hanya data contoh dan belum terpasang. Token webhook kasir: `local-pos-webhook-token`. Ganti akun dan token sebelum dipakai di luar mesin pengembangan. Perangkat baru mendapat token acak sendiri dari halaman Perangkat.
 
-Untuk MySQL, buat database `ritelin_smart_shelf`, lalu isi `DB_CONNECTION=mysql` beserta host, nama database, dan pengguna di `.env`.
+Untuk MySQL, buat database `rakku`, lalu isi `DB_CONNECTION=mysql` beserta host, nama database, dan pengguna di `.env`.
 
 ## API
 
@@ -42,7 +47,7 @@ Semua permintaan perangkat memakai `Authorization: Bearer <token perangkat>`.
 }
 ```
 
-`event_type` yang sah: `ITEM_REMOVED` atau `ITEM_RETURNED`. Timestamp wajib berakhiran `Z`. Pengiriman ulang `event_id` yang sama untuk perangkat yang sama mengembalikan data lama dan tidak menambah baris.
+`event_type` yang sah: `ITEM_REMOVED`, `ITEM_ADDED`, atau `ITEM_RETURNED`. `ITEM_ADDED` artinya berat naik dan stabil. Timestamp wajib berakhiran `Z`. Pengiriman ulang `event_id` yang sama untuk perangkat yang sama mengembalikan data lama dan tidak menambah baris.
 
 `GET /api/config` mengembalikan `threshold_grams` dan `verify_ms`, lalu memperbarui waktu terakhir perangkat terlihat.
 
@@ -59,7 +64,7 @@ Semua permintaan perangkat memakai `Authorization: Bearer <token perangkat>`.
 
 `external_id` yang sama tidak membuat transaksi kedua.
 
-Di lingkungan production, set `RITELIN_REQUIRE_TLS=true` dan layani aplikasi lewat HTTPS.
+Di lingkungan production, set `RAKKU_REQUIRE_TLS=true` dan layani aplikasi lewat HTTPS.
 
 ## Pencocokan
 

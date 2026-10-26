@@ -10,11 +10,11 @@ class AuthenticatePos
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (config('ritelin.require_tls') && ! $request->secure()) {
+        if (config('rakku.require_tls') && ! $request->secure()) {
             return response()->json(['message' => 'HTTPS diperlukan.'], 400);
         }
 
-        $configured = (string) config('ritelin.pos_token');
+        $configured = (string) config('rakku.pos_token');
         $given = (string) $request->header('X-Pos-Token', '');
 
         if ($configured === '' || strlen($configured) !== strlen($given) || ! hash_equals($configured, $given)) {

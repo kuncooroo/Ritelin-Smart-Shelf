@@ -1,5 +1,5 @@
 ---
-description: Dashboard admin RITELIN hanya memantau indikasi aktivitas rak.
+description: Dashboard admin Rakku hanya memantau indikasi aktivitas rak.
 globs: dashboard/**,backend/app/Livewire/**,backend/resources/views/**
 alwaysApply: false
 ---

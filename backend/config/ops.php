@@ -6,7 +6,7 @@ return [
     | Akun utama. Dipakai MainSeeder. Akun yang sudah ada tidak diganti sandinya.
     */
     'primary' => [
-        'name' => env('SUPERADMIN_NAME', env('ADMIN_NAME', 'Admin Ritelin')),
+        'name' => env('SUPERADMIN_NAME', env('ADMIN_NAME', 'Admin Rakku')),
         'email' => env('SUPERADMIN_EMAIL', env('ADMIN_EMAIL', 'admin@ritelin.local')),
         'password' => env('SUPERADMIN_PASSWORD', env('ADMIN_PASSWORD', 'password')),
         'role' => 'superadmin',

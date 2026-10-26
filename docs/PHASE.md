@@ -1,4 +1,4 @@
-# Tahapan RITELIN Smart Shelf
+# Tahapan Rakku
 
 Sumber persyaratan: [prd.md](prd.md).
 

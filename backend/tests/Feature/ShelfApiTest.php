@@ -28,10 +28,10 @@ class ShelfApiTest extends TestCase
     {
         parent::setUp();
         config([
-            'ritelin.pos_token' => 'pos-secret',
-            'ritelin.match_window_minutes' => 10,
-            'ritelin.match_lead_minutes' => 2,
-            'ritelin.stock_window_minutes' => 2,
+            'rakku.pos_token' => 'pos-secret',
+            'rakku.match_window_minutes' => 10,
+            'rakku.match_lead_minutes' => 2,
+            'rakku.stock_window_minutes' => 2,
         ]);
     }
 
@@ -79,7 +79,7 @@ class ShelfApiTest extends TestCase
     public function test_public_network_requires_https_when_enabled(): void
     {
         $this->device();
-        config(['ritelin.require_tls' => true]);
+        config(['rakku.require_tls' => true]);
 
         $this->postJson('/api/events', $this->eventPayload(), $this->deviceHeaders())
             ->assertStatus(400);

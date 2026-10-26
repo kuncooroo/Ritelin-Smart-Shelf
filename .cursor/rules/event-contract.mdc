@@ -1,5 +1,5 @@
 ---
-description: Kontrak event sensor RITELIN agar retry tidak menggandakan data.
+description: Kontrak event sensor Rakku agar retry tidak menggandakan data.
 globs: firmware/**,backend/**
 alwaysApply: false
 ---
@@ -19,7 +19,7 @@ Payload event:
 ```
 
 - `device_id` unik per perangkat. `event_id` unik per kejadian.
-- `event_type` yang sah: `ITEM_REMOVED`, `ITEM_RETURNED`.
+- `event_type` yang sah: `ITEM_REMOVED`, `ITEM_ADDED`, `ITEM_RETURNED`.
 - `timestamp` UTC dengan zona waktu eksplisit (`Z`).
 - Nilai berat dan waktu berasal dari firmware, bukan contoh statis.
 - Retry mengirim `event_id` yang sama. Penerima menolak duplikat.

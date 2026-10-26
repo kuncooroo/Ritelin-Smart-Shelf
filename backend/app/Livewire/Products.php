@@ -8,6 +8,9 @@ use App\Livewire\Concerns\ConfirmsActions;
 use App\Livewire\Concerns\WithPageSize;
 use App\Models\Product;
 use App\Services\AuditLogger;
+use App\Support\WebpImage;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
@@ -106,7 +109,13 @@ class Products extends Component
         ]);
 
         if ($this->image !== null) {
-            $product->image_path = $this->image->store('products', 'uploads');
+            $webp = WebpImage::encode((string) file_get_contents($this->image->getRealPath()), 800);
+            $path = 'products/'.Str::uuid()->toString().'.webp';
+            Storage::disk('uploads')->put($path, $webp);
+            if (is_string($product->image_path) && $product->image_path !== '') {
+                Storage::disk('uploads')->delete($product->image_path);
+            }
+            $product->image_path = $path;
         }
 
         $product->save();

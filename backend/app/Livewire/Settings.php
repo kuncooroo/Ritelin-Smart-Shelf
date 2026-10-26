@@ -102,7 +102,7 @@ class Settings extends Component
     {
         return view('livewire.settings', [
             'logs' => AuditLog::query()->with('user')->orderByDesc('id')->paginate($this->pageSize(), ['*'], 'logs'),
-            'posReady' => config('ritelin.pos_token') !== null && config('ritelin.pos_token') !== '',
+            'posReady' => config('rakku.pos_token') !== null && config('rakku.pos_token') !== '',
         ]);
     }
 }
