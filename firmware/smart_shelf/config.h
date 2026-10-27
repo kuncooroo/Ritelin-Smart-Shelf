@@ -10,7 +10,7 @@
 #define WIFI_PASSWORD "kostlt2165"
 
 // Prototipe LAN boleh http. Jaringan publik wajib https:// dengan sertifikat valid.
-#define API_BASE_URL "http://192.168.1.5:8000"
+#define API_BASE_URL "http://192.168.1.7:8000"
 #define API_TLS_INSECURE 0
 
 #define HX711_DOUT_PIN 4
