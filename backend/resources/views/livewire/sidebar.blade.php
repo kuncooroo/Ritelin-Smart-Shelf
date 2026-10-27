@@ -3,6 +3,7 @@
     $itemCount = collect($navGroups)->sum(fn ($group) => count($group['items']));
 @endphp
 
+<div>
 @if ($itemCount <= 1)
     <div class="rounded-lg border border-wd-border bg-wd-sidebar px-3 py-3 text-sm text-wd-muted">
         Tidak ada modul rak yang diizinkan untuk akun ini. Hubungi admin retail.
@@ -37,3 +38,4 @@
         @endforeach
     </nav>
 @endif
+</div>

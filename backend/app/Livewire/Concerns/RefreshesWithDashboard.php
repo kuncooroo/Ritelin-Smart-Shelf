@@ -6,7 +6,7 @@ use Livewire\Attributes\On;
 
 trait RefreshesWithDashboard
 {
-    #[On('echo-private:dashboard,DashboardUpdated')]
+    #[On('dashboard-refreshed')]
     public function refreshFromDashboard(): void
     {
     }

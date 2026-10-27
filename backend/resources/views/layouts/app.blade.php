@@ -130,7 +130,7 @@
                 <button type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-wd-border hover:bg-wd-sidebar" @click="sidebarOpen = false" aria-label="Tutup menu">✕</button>
             </div>
             <div class="flex-1 overflow-y-auto px-3 py-4">
-                <livewire:sidebar />
+                <livewire:sidebar wire:key="app-sidebar" />
             </div>
         </aside>
 

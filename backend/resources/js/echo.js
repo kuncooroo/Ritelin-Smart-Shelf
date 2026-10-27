@@ -12,3 +12,16 @@ window.Echo = new Echo({
     forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
     enabledTransports: ['ws', 'wss'],
 });
+
+let dashboardListening = false;
+
+document.addEventListener('livewire:init', () => {
+    if (dashboardListening) {
+        return;
+    }
+
+    dashboardListening = true;
+    window.Echo.private('dashboard').listen('DashboardUpdated', () => {
+        window.Livewire.dispatch('dashboard-refreshed');
+    });
+});
